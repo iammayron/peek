@@ -67,6 +67,7 @@ func Install(dev bool) (*Result, error) {
 
 	res.Agents = installAgents(bin)
 	installSkills()
+	installHooks(bin)
 	return res, nil
 }
 

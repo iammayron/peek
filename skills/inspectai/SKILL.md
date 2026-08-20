@@ -1,9 +1,9 @@
 ---
 name: inspectai
 description: >
-  Read the DOM element the user pinned in their browser with InspectAI.
-  Use when the user says "this", "this element", "the selected/inspected/pinned
-  element", "look at this", "I selected", or runs /inspectai — before guessing
+  Read the DOM element(s) the user pinned in their browser with InspectAI.
+  Use when the user says "this", "these", "this element", "the selected/inspected/pinned
+  elements", "look at this", "I selected", or runs /inspectai — before guessing
   at CSS or which component to edit.
 ---
 
@@ -15,7 +15,7 @@ The user points at elements in their real browser (Chrome/Brave/Edge/Arc). Do no
 
 Call MCP tool `get_picked_element` (or run `inspectai latest` if MCP is unavailable).
 
-The tool returns a cropped screenshot plus selector, XPath, role/name, box, computed style, and truncated HTML. Treat that as ground truth.
+The tool returns one or more pins from the current session: cropped screenshots plus selector, XPath, role/name, box, computed style, and truncated HTML. Treat that as ground truth. If several elements were pinned, handle all of them.
 
 ## When they have not picked yet
 

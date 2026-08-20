@@ -45,6 +45,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "inspectai:disarmed") {
     chrome.action.setBadgeText({ text: "" });
   }
+  if (message?.type === "inspectai:unpin") {
+    (async () => {
+      try {
+        await fetch(`${BRIDGE}/pin?id=${encodeURIComponent(message.id || "")}`, {
+          method: "DELETE",
+          headers: { "X-InspectAI": "1" },
+        });
+        sendResponse({ ok: true });
+      } catch (err) {
+        sendResponse({ ok: false, error: err?.message || String(err) });
+      }
+    })();
+    return true;
+  }
+  if (message?.type === "inspectai:done") {
+    (async () => {
+      try {
+        const res = await fetch(`${BRIDGE}/done`, {
+          method: "POST",
+          headers: { "X-InspectAI": "1" },
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || res.statusText);
+        sendResponse({ ok: true, text: body.text || "", count: body.count || 0 });
+      } catch (err) {
+        sendResponse({ ok: false, error: err?.message || String(err) });
+      }
+    })();
+    return true;
+  }
 });
 
 keepBridge();

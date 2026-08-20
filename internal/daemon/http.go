@@ -21,6 +21,8 @@ func (d *Daemon) startHTTP(ctx context.Context) {
 	mux.HandleFunc("/status", d.handleHTTPStatus)
 	mux.HandleFunc("/hello", d.handleHTTPHello)
 	mux.HandleFunc("/pin", d.handleHTTPPin)
+	mux.HandleFunc("/session", d.handleHTTPSession)
+	mux.HandleFunc("/done", d.handleHTTPDone)
 	mux.HandleFunc("/arm", d.handleHTTPArm)
 
 	srv := &http.Server{
@@ -52,7 +54,7 @@ func withCORS(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", "chrome-extension://"+inspectai.ExtensionID)
 		}
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-InspectAI")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 		w.Header().Set("Vary", "Origin")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
@@ -81,7 +83,39 @@ func (d *Daemon) handleHTTPHello(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true, "type": "hello"})
 }
 
+func (d *Daemon) handleHTTPSession(w http.ResponseWriter, r *http.Request) {
+	resp := d.sessionResponse("")
+	if !resp.OK {
+		http.Error(w, resp.Error, http.StatusNotFound)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "pins": resp.Pins})
+}
+
+func (d *Daemon) handleHTTPDone(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	resp := d.doneRequest(&rpc.Request{ID: "http"})
+	if !resp.OK {
+		http.Error(w, resp.Error, http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "text": resp.Text, "count": len(resp.Pins)})
+}
+
 func (d *Daemon) handleHTTPPin(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodDelete {
+		id := r.URL.Query().Get("id")
+		resp := d.unpinRequest(&rpc.Request{ID: "http", Params: jsonRawID(id)})
+		if !resp.OK {
+			http.Error(w, resp.Error, http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, map[string]any{"ok": true, "pins": resp.Pins})
+		return
+	}
 	if r.Method != http.MethodPost {
 		http.Error(w, "POST only", http.StatusMethodNotAllowed)
 		return
@@ -150,6 +184,11 @@ func (d *Daemon) dropHTTPArm(ch chan struct{}) {
 		}
 	}
 	d.httpArm = out
+}
+
+func jsonRawID(id string) json.RawMessage {
+	b, _ := json.Marshal(map[string]string{"id": id})
+	return b
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

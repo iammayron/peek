@@ -33,6 +33,7 @@ type bridge struct {
 type Daemon struct {
 	mu       sync.Mutex
 	latest   *payload.Pin
+	session  payload.Session
 	waiters  []chan payload.Pin
 	bridges  map[net.Conn]*bridge
 	httpArm  []chan struct{}
@@ -40,7 +41,7 @@ type Daemon struct {
 }
 
 func New() *Daemon {
-	return &Daemon{bridges: map[net.Conn]*bridge{}}
+	return &Daemon{bridges: map[net.Conn]*bridge{}, session: payload.NewSession()}
 }
 
 func Run() error {
@@ -149,10 +150,12 @@ func DialClient() (*rpc.Client, error) {
 
 func (d *Daemon) loadLatest() {
 	p, err := payload.ReadFile(paths.LatestJSON())
-	if err != nil {
-		return
+	if err == nil {
+		d.latest = &p
 	}
-	d.latest = &p
+	if s, err := payload.ReadSession(paths.SessionJSON()); err == nil {
+		d.session = s
+	}
 }
 
 func (d *Daemon) handle(conn net.Conn) {
@@ -194,19 +197,15 @@ func (d *Daemon) dispatch(conn net.Conn, wmu *sync.Mutex, req *rpc.Request) *rpc
 	case "pin":
 		return d.pinRequest(req)
 	case "latest":
-		d.mu.Lock()
-		defer d.mu.Unlock()
-		if d.latest == nil {
-			return &rpc.Response{ID: req.ID, OK: false, Error: "no element pinned yet"}
-		}
-		cp := *d.latest
-		return &rpc.Response{ID: req.ID, OK: true, Pin: &cp}
+		return d.latestResponse(req.ID)
+	case "session":
+		return d.sessionResponse(req.ID)
+	case "unpin":
+		return d.unpinRequest(req)
+	case "done":
+		return d.doneRequest(req)
 	case "list":
-		pins, err := listHistory()
-		if err != nil {
-			return &rpc.Response{ID: req.ID, OK: false, Error: err.Error()}
-		}
-		return &rpc.Response{ID: req.ID, OK: true, Pins: pins}
+		return d.sessionResponse(req.ID)
 	case "wait":
 		return d.wait(req)
 	case "arm":
@@ -305,10 +304,16 @@ func (d *Daemon) savePin(p rpc.PinParams) (*payload.Pin, error) {
 	pruneHistory()
 
 	d.mu.Lock()
+	if d.session.Ready || d.session.ID == "" {
+		d.session = payload.NewSession()
+	}
+	d.session.Pins = append(d.session.Pins, pin)
 	d.latest = &pin
 	waiters := d.waiters
 	d.waiters = nil
+	sess := d.session
 	d.mu.Unlock()
+	_ = sess.Write(paths.SessionJSON())
 	for _, ch := range waiters {
 		select {
 		case ch <- pin:
@@ -317,6 +322,81 @@ func (d *Daemon) savePin(p rpc.PinParams) (*payload.Pin, error) {
 	}
 	cp := pin
 	return &cp, nil
+}
+
+func (d *Daemon) latestResponse(id string) *rpc.Response {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if len(d.session.Pins) > 0 {
+		cp := d.session.Pins[len(d.session.Pins)-1]
+		return &rpc.Response{ID: id, OK: true, Pin: &cp, Pins: append([]payload.Pin(nil), d.session.Pins...)}
+	}
+	if d.latest == nil {
+		return &rpc.Response{ID: id, OK: false, Error: "no element pinned yet"}
+	}
+	cp := *d.latest
+	return &rpc.Response{ID: id, OK: true, Pin: &cp}
+}
+
+func (d *Daemon) sessionResponse(id string) *rpc.Response {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if len(d.session.Pins) == 0 {
+		return &rpc.Response{ID: id, OK: false, Error: "no element pinned yet"}
+	}
+	pins := append([]payload.Pin(nil), d.session.Pins...)
+	last := pins[len(pins)-1]
+	return &rpc.Response{ID: id, OK: true, Pin: &last, Pins: pins}
+}
+
+func (d *Daemon) unpinRequest(req *rpc.Request) *rpc.Response {
+	var p struct {
+		ID string `json:"id"`
+	}
+	_ = json.Unmarshal(req.Params, &p)
+	if p.ID == "" {
+		return &rpc.Response{ID: req.ID, OK: false, Error: "missing id"}
+	}
+	d.mu.Lock()
+	out := d.session.Pins[:0]
+	for _, pin := range d.session.Pins {
+		if pin.ID != p.ID {
+			out = append(out, pin)
+		}
+	}
+	d.session.Pins = out
+	if len(d.session.Pins) > 0 {
+		last := d.session.Pins[len(d.session.Pins)-1]
+		d.latest = &last
+	} else {
+		d.latest = nil
+	}
+	sess := d.session
+	d.mu.Unlock()
+	_ = sess.Write(paths.SessionJSON())
+	return &rpc.Response{ID: req.ID, OK: true, Pins: sess.Pins}
+}
+
+func (d *Daemon) doneRequest(req *rpc.Request) *rpc.Response {
+	d.mu.Lock()
+	if len(d.session.Pins) == 0 {
+		d.mu.Unlock()
+		return &rpc.Response{ID: req.ID, OK: false, Error: "no pins"}
+	}
+	now := time.Now().UTC()
+	d.session.Ready = true
+	d.session.ReadyAt = &now
+	d.session.Injected = false
+	pins := append([]payload.Pin(nil), d.session.Pins...)
+	sess := d.session
+	d.mu.Unlock()
+	_ = sess.Write(paths.SessionJSON())
+	return &rpc.Response{
+		ID:   req.ID,
+		OK:   true,
+		Pins: pins,
+		Text: payload.ClipboardMessage(pins),
+	}
 }
 
 func (d *Daemon) wait(req *rpc.Request) *rpc.Response {

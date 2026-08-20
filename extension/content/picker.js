@@ -17,6 +17,8 @@
   let raf = 0;
   let lastEl = null;
   let lastPoint = { x: 0, y: 0 };
+  let pins = [];
+  let pinning = false;
 
   function arm() {
     if (armed) return;
@@ -42,6 +44,7 @@
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     lastEl = null;
+    pins = [];
     unmount();
     chrome.runtime.sendMessage({ type: "inspectai:disarmed" }).catch(() => {});
   }
@@ -150,6 +153,82 @@
           pointer-events: none;
           text-transform: uppercase;
         }
+        .tray {
+          position: fixed;
+          right: 16px;
+          bottom: 16px;
+          z-index: 12;
+          pointer-events: auto;
+          width: min(320px, calc(100vw - 32px));
+          background: #14120E;
+          color: #F4F1EA;
+          border: 1px solid #C8FF4D;
+          padding: 10px;
+          font: 11px/1.35 "IBM Plex Mono", "SF Mono", ui-monospace, Menlo, monospace;
+        }
+        .tray-title {
+          color: #C8FF4D;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+        .pills {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          min-height: 24px;
+        }
+        .empty {
+          color: #8a867c;
+        }
+        .pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          max-width: 100%;
+          border: 1px solid #C8FF4D;
+          color: #C8FF4D;
+          background: transparent;
+          padding: 3px 4px 3px 7px;
+          cursor: default;
+        }
+        .pill:hover {
+          background: rgba(200, 255, 77, 0.12);
+        }
+        .pill-label {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 220px;
+        }
+        .pill-x {
+          border: 0;
+          background: transparent;
+          color: #C8FF4D;
+          cursor: pointer;
+          font: inherit;
+          padding: 0 4px;
+          line-height: 1;
+        }
+        .tray-actions {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 10px;
+        }
+        .done {
+          border: 0;
+          background: #C8FF4D;
+          color: #14120E;
+          font: inherit;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          padding: 6px 12px;
+          cursor: pointer;
+        }
+        .done:disabled {
+          opacity: 0.35;
+          cursor: default;
+        }
       </style>
       <div class="layer" part="layer"></div>
       <div class="box" hidden>
@@ -157,11 +236,18 @@
         <span class="tick bl"></span><span class="tick br"></span>
       </div>
       <div class="chip" hidden></div>
-      <div class="hud">Click an element · <kbd>Esc</kbd> cancels</div>
+      <div class="hud">Click to pin · <kbd>Done</kbd> when finished · <kbd>Esc</kbd> cancels</div>
+      <aside class="tray">
+        <div class="tray-title">Pinned</div>
+        <div class="pills"><span class="empty">None yet</span></div>
+        <div class="tray-actions"><button class="done" type="button" disabled>Done</button></div>
+      </aside>
     `;
     box = shadow.querySelector(".box");
     chip = shadow.querySelector(".chip");
     hud = shadow.querySelector(".hud");
+    const doneBtn = shadow.querySelector(".done");
+    doneBtn.addEventListener("click", onDone);
     document.documentElement.appendChild(host);
   }
 
@@ -175,6 +261,7 @@
   }
 
   function onMove(e) {
+    if (inTray(e)) return;
     lastPoint = { x: e.clientX, y: e.clientY };
     if (raf) return;
     raf = requestAnimationFrame(() => {
@@ -224,20 +311,28 @@
     chip.style.top = `${cy}px`;
   }
 
+  function inTray(e) {
+    return e.composedPath().some((n) => n.classList?.contains?.("tray"));
+  }
+
   function onDown(e) {
     if (!armed) return;
+    if (inTray(e)) return;
     e.preventDefault();
     e.stopPropagation();
   }
 
   async function onClick(e) {
-    if (!armed) return;
+    if (!armed || pinning) return;
+    if (inTray(e)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     const el = lastEl || hit(e.clientX, e.clientY);
     if (!el) return;
+    if (pins.some((p) => p.el === el)) return;
     const payload = sel()?.describe(el);
     if (!payload) return;
+    pinning = true;
     hideForCapture();
     await twoFrames();
     let res;
@@ -246,8 +341,102 @@
     } catch (err) {
       res = { ok: false, error: err?.message || String(err) };
     }
-    showToast(res?.ok ? "Pinned for AI" : `Pin failed · ${res?.error || "no daemon"}`);
-    await sleep(1400);
+    if (host) host.style.opacity = "1";
+    pinning = false;
+    if (!res?.ok) {
+      showToast(`Pin failed · ${res?.error || "no daemon"}`);
+      return;
+    }
+    pins.push({
+      id: res.id || String(pins.length + 1),
+      el,
+      label: sel()?.chipLabel(el) || el.tagName.toLowerCase(),
+      selector: payload.selector,
+    });
+    renderPills();
+  }
+
+  function renderPills() {
+    const wrap = shadow?.querySelector(".pills");
+    const doneBtn = shadow?.querySelector(".done");
+    if (!wrap) return;
+    wrap.replaceChildren();
+    if (pins.length === 0) {
+      const empty = document.createElement("span");
+      empty.className = "empty";
+      empty.textContent = "None yet";
+      wrap.appendChild(empty);
+      if (doneBtn) doneBtn.disabled = true;
+      return;
+    }
+    if (doneBtn) doneBtn.disabled = false;
+    for (const pin of pins) {
+      const pill = document.createElement("div");
+      pill.className = "pill";
+      const label = document.createElement("span");
+      label.className = "pill-label";
+      label.textContent = pin.label;
+      const x = document.createElement("button");
+      x.type = "button";
+      x.className = "pill-x";
+      x.setAttribute("aria-label", "Unpin");
+      x.textContent = "×";
+      x.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        unpin(pin.id);
+      });
+      pill.addEventListener("pointerenter", () => highlightEl(pin.el));
+      pill.addEventListener("pointerleave", () => {
+        if (box) box.hidden = true;
+        if (chip) chip.hidden = true;
+      });
+      pill.append(label, x);
+      wrap.appendChild(pill);
+    }
+  }
+
+  function highlightEl(el) {
+    if (!el?.isConnected || !box) return;
+    const r = el.getBoundingClientRect();
+    box.hidden = false;
+    box.style.left = `${r.x}px`;
+    box.style.top = `${r.y}px`;
+    box.style.width = `${Math.max(1, r.width)}px`;
+    box.style.height = `${Math.max(1, r.height)}px`;
+    chip.hidden = false;
+    chip.textContent = sel()?.chipLabel(el) || el.tagName.toLowerCase();
+    chip.style.left = `${Math.max(8, r.x)}px`;
+    chip.style.top = `${r.y < 28 ? r.bottom + 6 : r.y - 22}px`;
+  }
+
+  function unpin(id) {
+    pins = pins.filter((p) => p.id !== id);
+    renderPills();
+    chrome.runtime.sendMessage({ type: "inspectai:unpin", id }).catch(() => {});
+  }
+
+  async function onDone(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (pins.length === 0) return;
+    let res;
+    try {
+      res = await chrome.runtime.sendMessage({ type: "inspectai:done" });
+    } catch (err) {
+      res = { ok: false, error: err?.message || String(err) };
+    }
+    if (res?.text) {
+      try {
+        await navigator.clipboard.writeText(res.text);
+      } catch {
+        /* still show the hint */
+      }
+    }
+    showToast(res?.ok
+      ? "Copied · Grok: look at this · Claude/Codex: send your next prompt"
+      : `Done failed · ${res?.error || "no daemon"}`);
+    await sleep(1600);
     disarm();
   }
 
@@ -263,13 +452,8 @@
   }
 
   function showToast(text) {
-    if (!shadow) {
-      mount();
-    }
+    if (!shadow) mount();
     if (host) host.style.opacity = "1";
-    if (box) box.hidden = true;
-    if (chip) chip.hidden = true;
-    if (hud) hud.hidden = true;
     const old = shadow.querySelector(".toast");
     old?.remove();
     const t = document.createElement("div");

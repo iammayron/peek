@@ -15,7 +15,7 @@ var SkillMD string
 const (
 	Name        = "inspectai"
 	Pretty      = "InspectAI"
-	Version     = "0.1.0"
+	Version     = "0.2.0"
 	HostName    = "com.inspectai.host"
 	ExtensionID = "pddflklmmojokihfohpdcncbkbfhceak"
 )

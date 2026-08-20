@@ -17,13 +17,14 @@ func Home() string {
 	return filepath.Join(dir, ".inspectai")
 }
 
-func Socket() string     { return filepath.Join(Home(), "rpc.sock") }
-func PIDFile() string    { return filepath.Join(Home(), "daemon.pid") }
-func LogFile() string    { return filepath.Join(Home(), "daemon.log") }
-func LatestJSON() string { return filepath.Join(Home(), "latest.json") }
-func LatestPNG() string  { return filepath.Join(Home(), "latest.png") }
-func HistoryDir() string { return filepath.Join(Home(), "history") }
-func DataDir() string    { return appData() }
+func Socket() string      { return filepath.Join(Home(), "rpc.sock") }
+func PIDFile() string     { return filepath.Join(Home(), "daemon.pid") }
+func LogFile() string     { return filepath.Join(Home(), "daemon.log") }
+func LatestJSON() string  { return filepath.Join(Home(), "latest.json") }
+func LatestPNG() string   { return filepath.Join(Home(), "latest.png") }
+func SessionJSON() string { return filepath.Join(Home(), "session.json") }
+func HistoryDir() string  { return filepath.Join(Home(), "history") }
+func DataDir() string     { return appData() }
 
 func ExtensionDir() string {
 	return filepath.Join(DataDir(), "extension")

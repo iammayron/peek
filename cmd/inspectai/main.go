@@ -44,6 +44,8 @@ func main() {
 		err = cmdWait(os.Args[2:])
 	case "install":
 		err = cmdInstall(os.Args[2:])
+	case "hook-prompt":
+		err = daemon.HookPrompt()
 	case "doctor":
 		install.Doctor()
 	case "version", "-v", "--version":
@@ -87,6 +89,7 @@ Commands:
   doctor            Check the bridge, extension, and last pin
   latest [--md]     Print the current pin as JSON (or markdown)
   wait [--timeout]  Block until the next pin (seconds, default 60)
+  hook-prompt       Claude/Codex UserPromptSubmit hook (do not run by hand)
   mcp               stdio MCP server for Grok / Claude / Codex
   daemon            Long-running host (launchd / systemd)
   native-host       Chrome native messaging (called by the browser)

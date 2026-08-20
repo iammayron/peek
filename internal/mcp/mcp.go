@@ -18,7 +18,7 @@ func Run() error {
 	s := server.NewMCPServer(inspectai.Pretty, inspectai.Version)
 
 	s.AddTool(mcp.NewTool("get_picked_element",
-		mcp.WithDescription("Return the DOM element the user last pinned in their browser with InspectAI, including a cropped screenshot, unique selector, XPath, role/name, box, computed styles, and truncated HTML. Use when the user says 'this', 'this element', 'the selected/inspected/pinned element', or 'look at this'."),
+		mcp.WithDescription("Return the DOM element(s) the user pinned in their browser with InspectAI (current session), including cropped screenshots, unique selectors, XPath, role/name, box, computed styles, and truncated HTML. Use when the user says 'this', 'these', 'the selected/inspected/pinned element', or 'look at this'."),
 	), getPicked)
 
 	s.AddTool(mcp.NewTool("wait_for_pick",
@@ -30,7 +30,7 @@ func Run() error {
 	), waitForPick)
 
 	s.AddTool(mcp.NewTool("list_picks",
-		mcp.WithDescription("List recent InspectAI pins (metadata only, no screenshots)."),
+		mcp.WithDescription("List the current InspectAI session pins (metadata only, no screenshots)."),
 	), listPicks)
 
 	return server.ServeStdio(s)
@@ -42,9 +42,12 @@ func getPicked(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResul
 		return mcp.NewToolResultError("InspectAI daemon is not running: " + err.Error()), nil
 	}
 	defer c.Close()
-	resp, err := c.Call("latest", nil, 5*time.Second)
+	resp, err := c.Call("session", nil, 5*time.Second)
 	if err != nil {
 		return mcp.NewToolResultError("No element pinned yet. Ask the user to click one, or call wait_for_pick. (" + err.Error() + ")"), nil
+	}
+	if len(resp.Pins) > 0 {
+		return pinsResult(resp.Pins)
 	}
 	return pinResult(resp.Pin)
 }
@@ -83,6 +86,32 @@ func listPicks(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResul
 	}
 	b, _ := json.MarshalIndent(resp.Pins, "", "  ")
 	return mcp.NewToolResultText(string(b)), nil
+}
+
+func pinsResult(pins []payload.Pin) (*mcp.CallToolResult, error) {
+	if len(pins) == 0 {
+		return mcp.NewToolResultError("no pin"), nil
+	}
+	if len(pins) == 1 {
+		return pinResult(&pins[0])
+	}
+	contents := []mcp.Content{mcp.NewTextContent(payload.SessionMarkdown(pins))}
+	for i := range pins {
+		p := pins[i]
+		if p.ScreenshotPath == "" {
+			continue
+		}
+		raw, err := os.ReadFile(p.ScreenshotPath)
+		if err != nil {
+			continue
+		}
+		mime := p.ScreenshotMIME
+		if mime == "" {
+			mime = "image/png"
+		}
+		contents = append(contents, mcp.NewImageContent(base64.StdEncoding.EncodeToString(raw), mime))
+	}
+	return &mcp.CallToolResult{Content: contents}, nil
 }
 
 func pinResult(pin *payload.Pin) (*mcp.CallToolResult, error) {

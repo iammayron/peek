@@ -37,6 +37,7 @@ type Response struct {
 	Pins   []payload.Pin `json:"pins,omitempty"`
 	Status *Status       `json:"status,omitempty"`
 	Type   string        `json:"type,omitempty"`
+	Text   string        `json:"text,omitempty"`
 }
 
 type PinParams struct {
