@@ -9,30 +9,33 @@ description: >
 
 # InspectAI
 
-The user points at elements in their real browser (Chrome/Brave/Edge/Arc). Do not guess which node they mean — fetch the pin.
+The user pins nodes with the InspectAI **browser extension UI**: toolbar icon, click elements on the page, pills in the corner panel, **Done** (copies a prompt) or **Cancel**.
 
-## When they already picked
+Do not guess which node they mean. Fetch the session.
 
-Call MCP tool `get_picked_element` (or run `inspectai latest` if MCP is unavailable).
+## When they already pinned
 
-The tool returns one or more pins from the current session: cropped screenshots plus selector, XPath, role/name, box, computed style, and truncated HTML. Treat that as ground truth. If several elements were pinned, handle all of them.
+They often paste `look at this` (Done copies that) or just say "look at this".
 
-## When they have not picked yet
+Call MCP `get_picked_element`. That returns the current session: screenshots, selectors, HTML. If several pins, handle all of them.
 
-Call `wait_for_pick`. That arms the overlay in their browser. Tell them:
+## When they have not pinned yet
 
-> Click the element in the browser (Alt+Shift+I if the overlay is not up). Esc cancels.
+Do **not** tell them about Alt+Shift+I or Esc. Point them at the UI:
 
-Default wait is 60s. Do not busy-loop `get_picked_element`.
+> Click the InspectAI icon in the browser toolbar. Click the elements in the page (they show up as pills). Hit **Done**, then paste here and say what to change.
 
-## How to use the pin
+If they are going to pin *now*, you may call `wait_for_pick` (arms the panel and waits until they hit Done). Do not busy-loop `get_picked_element`.
+
+## How to use the pins
 
 - Prefer `data-testid` / id selectors from the payload over inventing new ones.
-- Use the screenshot to judge spacing, overflow, and visual bugs; use HTML/CSS for structure.
-- If `inShadow` is true, the node is inside shadow DOM — edit the host component, not a global CSS path.
+- Use the screenshot for spacing, overflow, and visual bugs; HTML/CSS for structure.
+- If `inShadow` is true, edit the host component, not a global CSS path.
 - If `clipped` is true, the screenshot may miss part of the element.
 
 ## Do not
 
-- Do not drive the browser (click, fill, navigate). This skill only receives a pointed-at node.
+- Do not drive the browser (click, fill, navigate). This skill only receives pointed-at nodes.
 - Do not ignore a fresh pin in favor of an old screenshot in the conversation.
+- Do not lead with keyboard shortcuts. The panel is the product.

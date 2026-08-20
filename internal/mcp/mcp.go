@@ -22,10 +22,10 @@ func Run() error {
 	), getPicked)
 
 	s.AddTool(mcp.NewTool("wait_for_pick",
-		mcp.WithDescription("Arm the InspectAI overlay in the user's browser and block until they click an element. Use when nothing is pinned yet, or when the user offers to show you the element."),
+		mcp.WithDescription("Open the InspectAI panel in the user's browser and block until they hit Done. Use when nothing is pinned yet and they are about to pick in the UI."),
 		mcp.WithNumber("timeout_sec",
-			mcp.Description("Seconds to wait for a click. Default 60, max 300."),
-			mcp.DefaultNumber(60),
+			mcp.Description("Seconds to wait for Done. Default 120, max 300."),
+			mcp.DefaultNumber(120),
 		),
 	), waitForPick)
 
@@ -44,7 +44,7 @@ func getPicked(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResul
 	defer c.Close()
 	resp, err := c.Call("session", nil, 5*time.Second)
 	if err != nil {
-		return mcp.NewToolResultError("No element pinned yet. Ask the user to click one, or call wait_for_pick. (" + err.Error() + ")"), nil
+		return mcp.NewToolResultError("No element pinned yet. Ask them to use the InspectAI toolbar icon, pin in the page, hit Done, then paste. (" + err.Error() + ")"), nil
 	}
 	if len(resp.Pins) > 0 {
 		return pinsResult(resp.Pins)
@@ -53,7 +53,7 @@ func getPicked(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResul
 }
 
 func waitForPick(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	timeout := 60.0
+	timeout := 120.0
 	if v, err := req.RequireFloat("timeout_sec"); err == nil && v > 0 {
 		timeout = v
 	} else if args := req.GetArguments(); args != nil {
@@ -70,6 +70,9 @@ func waitForPick(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRes
 	resp, err := c.Call("wait", map[string]any{"timeoutSec": int(timeout)}, wait)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if len(resp.Pins) > 0 {
+		return pinsResult(resp.Pins)
 	}
 	return pinResult(resp.Pin)
 }

@@ -31,13 +31,14 @@ type bridge struct {
 }
 
 type Daemon struct {
-	mu       sync.Mutex
-	latest   *payload.Pin
-	session  payload.Session
-	waiters  []chan payload.Pin
-	bridges  map[net.Conn]*bridge
-	httpArm  []chan struct{}
-	extHello time.Time
+	mu          sync.Mutex
+	latest      *payload.Pin
+	session     payload.Session
+	waiters     []chan payload.Pin
+	doneWaiters []chan []payload.Pin
+	bridges     map[net.Conn]*bridge
+	httpArm     []chan struct{}
+	extHello    time.Time
 }
 
 func New() *Daemon {
@@ -389,8 +390,16 @@ func (d *Daemon) doneRequest(req *rpc.Request) *rpc.Response {
 	d.session.Injected = false
 	pins := append([]payload.Pin(nil), d.session.Pins...)
 	sess := d.session
+	doneWaiters := d.doneWaiters
+	d.doneWaiters = nil
 	d.mu.Unlock()
 	_ = sess.Write(paths.SessionJSON())
+	for _, ch := range doneWaiters {
+		select {
+		case ch <- pins:
+		default:
+		}
+	}
 	return &rpc.Response{
 		ID:   req.ID,
 		OK:   true,
@@ -404,7 +413,7 @@ func (d *Daemon) wait(req *rpc.Request) *rpc.Response {
 	_ = json.Unmarshal(req.Params, &p)
 	timeout := time.Duration(p.TimeoutSec) * time.Second
 	if timeout <= 0 {
-		timeout = 60 * time.Second
+		timeout = 120 * time.Second
 	}
 	if timeout > 5*time.Minute {
 		timeout = 5 * time.Minute
@@ -412,26 +421,33 @@ func (d *Daemon) wait(req *rpc.Request) *rpc.Response {
 	if err := d.armWithRetry(3 * time.Second); err != nil {
 		return &rpc.Response{ID: req.ID, OK: false, Error: err.Error()}
 	}
-	ch := make(chan payload.Pin, 1)
 	d.mu.Lock()
-	d.waiters = append(d.waiters, ch)
+	if d.session.FreshReady(2*time.Minute) && len(d.session.Pins) > 0 {
+		pins := append([]payload.Pin(nil), d.session.Pins...)
+		last := pins[len(pins)-1]
+		d.mu.Unlock()
+		return &rpc.Response{ID: req.ID, OK: true, Pin: &last, Pins: pins}
+	}
+	ch := make(chan []payload.Pin, 1)
+	d.doneWaiters = append(d.doneWaiters, ch)
 	d.mu.Unlock()
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	select {
-	case pin := <-ch:
-		return &rpc.Response{ID: req.ID, OK: true, Pin: &pin}
+	case pins := <-ch:
+		last := pins[len(pins)-1]
+		return &rpc.Response{ID: req.ID, OK: true, Pin: &last, Pins: pins}
 	case <-timer.C:
 		d.mu.Lock()
-		filtered := d.waiters[:0]
-		for _, w := range d.waiters {
+		filtered := d.doneWaiters[:0]
+		for _, w := range d.doneWaiters {
 			if w != ch {
 				filtered = append(filtered, w)
 			}
 		}
-		d.waiters = filtered
+		d.doneWaiters = filtered
 		d.mu.Unlock()
-		return &rpc.Response{ID: req.ID, OK: false, Error: "timed out waiting for a pick — click an element in the browser (Alt+Shift+I)"}
+		return &rpc.Response{ID: req.ID, OK: false, Error: "timed out. Pin in the InspectAI panel and hit Done."}
 	}
 }
 
@@ -461,7 +477,7 @@ func (d *Daemon) arm() error {
 	d.httpArm = nil
 	d.mu.Unlock()
 	if n == 0 && len(httpWaiters) == 0 {
-		return fmt.Errorf("extension not connected — open Chrome and click the InspectAI icon")
+		return fmt.Errorf("extension not connected — click the InspectAI toolbar icon")
 	}
 	for _, ch := range httpWaiters {
 		select {

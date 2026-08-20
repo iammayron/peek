@@ -520,8 +520,7 @@ func PrintInstallHelp(res *Result) {
 	fmt.Println("  3. Load unpacked →")
 	fmt.Printf("     %s\n", res.ExtensionDir)
 	fmt.Println()
-	fmt.Println("Shortcut: Alt+Shift+I  (or click the toolbar icon)")
-	fmt.Println("Then in Grok / Claude / Codex: “look at this”.")
+	fmt.Println("Click the InspectAI toolbar icon, pin elements, hit Done, paste in the agent.")
 	fmt.Println()
 	fmt.Printf("binary:    %s\n", res.Binary)
 	if res.Launchd != "" {
