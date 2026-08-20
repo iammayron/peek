@@ -1,0 +1,8 @@
+/bin/
+/dist/
+/inspectai
+*.exe
+.DS_Store
+.idea/
+.vscode/
+*.log
