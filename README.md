@@ -1,4 +1,4 @@
-# InspectAI
+# Peek
 
 Point at a DOM node in your real browser. Grok Build, Claude Code, Codex, and Cursor get the selector, a slice of HTML, and a cropped screenshot.
 
@@ -8,7 +8,7 @@ This is not a browser-driving agent. You pick. The model looks.
 
 ```bash
 brew tap iammayron/tap
-brew install inspectai
+brew install peek
 ```
 
 Or from this repo:
@@ -16,32 +16,32 @@ Or from this repo:
 ```bash
 make install
 # or
-curl -fsSL https://raw.githubusercontent.com/iammayron/inspectai/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/iammayron/peek/main/install.sh | sh
 ```
 
 Then:
 
 1. Open `chrome://extensions`
 2. Enable **Developer mode**
-3. **Load unpacked** → the path `inspectai install` printed (`…/inspectai/extension`, or `./extension` in `--dev`)
-4. Press **Alt+Shift+I** (or click the toolbar icon), click an element
+3. **Load unpacked** → the path `peek install` printed (`…/peek/extension`, or `./extension` in `--dev`)
+4. Press **Alt+Shift+P** (or click the toolbar icon), click an element
 5. In the agent: “look at this” / “this button is overflowing”
 
-`inspectai doctor` tells you if the daemon, native host, and last pin are healthy.
+`peek doctor` tells you if the daemon, native host, and last pin are healthy.
 
 ## Commands
 
 | | |
 |---|---|
-| `inspectai install [--dev]` | Native host, launchd/systemd, MCP, skills |
-| `inspectai doctor` | Status |
-| `inspectai latest [--md]` | Current pin |
-| `inspectai wait` | Block until the next click (also arms the overlay) |
-| `inspectai mcp` | stdio MCP server |
+| `peek install [--dev]` | Native host, launchd/systemd, MCP, skills |
+| `peek doctor` | Status |
+| `peek latest [--md]` | Current pin |
+| `peek wait` | Block until the next click (also arms the overlay) |
+| `peek mcp` | stdio MCP server |
 
 ## Privacy
 
-Everything stays on localhost. Pins live in `~/.inspectai/` (mode `0600`). No telemetry.
+Everything stays on localhost. Pins live in `~/.peek/` (mode `0600`). No telemetry.
 
 ## Chrome Web Store
 

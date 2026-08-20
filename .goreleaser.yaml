@@ -1,11 +1,11 @@
 version: 2
 
-project_name: inspectai
+project_name: peek
 
 builds:
-  - id: inspectai
-    main: ./cmd/inspectai
-    binary: inspectai
+  - id: peek
+    main: ./cmd/peek
+    binary: peek
     env:
       - CGO_ENABLED=0
     goos: [darwin, linux]

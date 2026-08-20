@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "InspectAI",
+  "name": "Peek",
   "version": "0.2.0",
   "description": "Point at a page element and send it — selector, DOM, and a cropped screenshot — to your coding agent.",
   "minimum_chrome_version": "116",
@@ -11,7 +11,7 @@
     "128": "icons/icon-128.png"
   },
   "action": {
-    "default_title": "InspectAI — pick an element (Alt+Shift+I)",
+    "default_title": "Peek — pick an element (Alt+Shift+P)",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png",
@@ -26,10 +26,10 @@
   "commands": {
     "toggle-picker": {
       "suggested_key": {
-        "default": "Alt+Shift+I",
-        "mac": "Alt+Shift+I"
+        "default": "Alt+Shift+P",
+        "mac": "Alt+Shift+P"
       },
-      "description": "Toggle the InspectAI element picker"
+      "description": "Toggle the Peek element picker"
     }
   }
 }

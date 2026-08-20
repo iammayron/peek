@@ -18,9 +18,9 @@ import (
 
 	"crypto/rand"
 
-	"github.com/iammayron/inspectai/internal/paths"
-	"github.com/iammayron/inspectai/internal/payload"
-	"github.com/iammayron/inspectai/internal/rpc"
+	"github.com/iammayron/peek/internal/paths"
+	"github.com/iammayron/peek/internal/payload"
+	"github.com/iammayron/peek/internal/rpc"
 )
 
 const historyKeep = 10
@@ -58,7 +58,7 @@ func Serve(ctx context.Context) error {
 	ln, err := listen()
 	if err != nil {
 		if errors.Is(err, errAlreadyRunning) {
-			fmt.Fprintln(os.Stderr, "inspectai daemon already running")
+			fmt.Fprintln(os.Stderr, "peek daemon already running")
 			return nil
 		}
 		return err
@@ -447,7 +447,7 @@ func (d *Daemon) wait(req *rpc.Request) *rpc.Response {
 		}
 		d.doneWaiters = filtered
 		d.mu.Unlock()
-		return &rpc.Response{ID: req.ID, OK: false, Error: "timed out. Pin in the InspectAI panel and hit Done."}
+		return &rpc.Response{ID: req.ID, OK: false, Error: "timed out. Pin in the Peek panel and hit Done."}
 	}
 }
 
@@ -477,7 +477,7 @@ func (d *Daemon) arm() error {
 	d.httpArm = nil
 	d.mu.Unlock()
 	if n == 0 && len(httpWaiters) == 0 {
-		return fmt.Errorf("extension not connected — click the InspectAI toolbar icon")
+		return fmt.Errorf("extension not connected — click the Peek toolbar icon")
 	}
 	for _, ch := range httpWaiters {
 		select {

@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/iammayron/inspectai/internal/paths"
-	"github.com/iammayron/inspectai/internal/payload"
+	"github.com/iammayron/peek/internal/paths"
+	"github.com/iammayron/peek/internal/payload"
 )
 
 type Request struct {

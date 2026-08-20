@@ -7,22 +7,22 @@ import (
 	"os"
 	"time"
 
-	inspectai "github.com/iammayron/inspectai"
-	"github.com/iammayron/inspectai/internal/daemon"
-	"github.com/iammayron/inspectai/internal/payload"
+	"github.com/iammayron/peek"
+	"github.com/iammayron/peek/internal/daemon"
+	"github.com/iammayron/peek/internal/payload"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 func Run() error {
-	s := server.NewMCPServer(inspectai.Pretty, inspectai.Version)
+	s := server.NewMCPServer(peek.Pretty, peek.Version)
 
 	s.AddTool(mcp.NewTool("get_picked_element",
-		mcp.WithDescription("Return the DOM element(s) the user pinned in their browser with InspectAI (current session), including cropped screenshots, unique selectors, XPath, role/name, box, computed styles, and truncated HTML. Use when the user says 'this', 'these', 'the selected/inspected/pinned element', or 'look at this'."),
+		mcp.WithDescription("Return the DOM element(s) the user pinned in their browser with Peek (current session), including cropped screenshots, unique selectors, XPath, role/name, box, computed styles, and truncated HTML. Use when the user says 'this', 'these', 'the selected/inspected/pinned element', or 'look at this'."),
 	), getPicked)
 
 	s.AddTool(mcp.NewTool("wait_for_pick",
-		mcp.WithDescription("Open the InspectAI panel in the user's browser and block until they hit Done. Use when nothing is pinned yet and they are about to pick in the UI."),
+		mcp.WithDescription("Open the Peek panel in the user's browser and block until they hit Done. Use when nothing is pinned yet and they are about to pick in the UI."),
 		mcp.WithNumber("timeout_sec",
 			mcp.Description("Seconds to wait for Done. Default 120, max 300."),
 			mcp.DefaultNumber(120),
@@ -30,7 +30,7 @@ func Run() error {
 	), waitForPick)
 
 	s.AddTool(mcp.NewTool("list_picks",
-		mcp.WithDescription("List the current InspectAI session pins (metadata only, no screenshots)."),
+		mcp.WithDescription("List the current Peek session pins (metadata only, no screenshots)."),
 	), listPicks)
 
 	return server.ServeStdio(s)
@@ -39,12 +39,12 @@ func Run() error {
 func getPicked(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	c, err := daemon.DialClient()
 	if err != nil {
-		return mcp.NewToolResultError("InspectAI daemon is not running: " + err.Error()), nil
+		return mcp.NewToolResultError("Peek daemon is not running: " + err.Error()), nil
 	}
 	defer c.Close()
 	resp, err := c.Call("session", nil, 5*time.Second)
 	if err != nil {
-		return mcp.NewToolResultError("No element pinned yet. Ask them to use the InspectAI toolbar icon, pin in the page, hit Done, then paste. (" + err.Error() + ")"), nil
+		return mcp.NewToolResultError("No element pinned yet. Ask them to use the Peek toolbar icon, pin in the page, hit Done, then paste. (" + err.Error() + ")"), nil
 	}
 	if len(resp.Pins) > 0 {
 		return pinsResult(resp.Pins)

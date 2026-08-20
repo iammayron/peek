@@ -1,12 +1,12 @@
 (() => {
-  const HOST_ID = "inspectai-host";
+  const HOST_ID = "peek-host";
 
-  if (globalThis.__inspectai) {
-    globalThis.__inspectai.arm();
+  if (globalThis.__peek) {
+    globalThis.__peek.arm();
     return;
   }
 
-  const sel = () => globalThis.__INSPECTAI_SELECTOR__;
+  const sel = () => globalThis.__PEEK_SELECTOR__;
 
   let armed = false;
   let host = null;
@@ -54,14 +54,14 @@
     lastEl = null;
     pins = [];
     unmount();
-    chrome.runtime.sendMessage({ type: "inspectai:disarmed" }).catch(() => {});
+    chrome.runtime.sendMessage({ type: "peek:disarmed" }).catch(() => {});
   }
 
   function mount() {
     if (host) return;
     host = document.createElement("div");
     host.id = HOST_ID;
-    host.setAttribute("data-inspectai", "host");
+    host.setAttribute("data-peek", "host");
     host.style.all = "initial";
     host.style.position = "fixed";
     host.style.inset = "0";
@@ -358,7 +358,7 @@
     await twoFrames();
     let res;
     try {
-      res = await chrome.runtime.sendMessage({ type: "inspectai:pin", payload });
+      res = await chrome.runtime.sendMessage({ type: "peek:pin", payload });
     } catch (err) {
       res = { ok: false, error: err?.message || String(err) };
     }
@@ -434,7 +434,7 @@
   function unpin(id) {
     pins = pins.filter((p) => p.id !== id);
     renderPills();
-    chrome.runtime.sendMessage({ type: "inspectai:unpin", id }).catch(() => {});
+    chrome.runtime.sendMessage({ type: "peek:unpin", id }).catch(() => {});
   }
 
   async function onDone(e) {
@@ -443,7 +443,7 @@
     if (pins.length === 0) return;
     let res;
     try {
-      res = await chrome.runtime.sendMessage({ type: "inspectai:done" });
+      res = await chrome.runtime.sendMessage({ type: "peek:done" });
     } catch (err) {
       res = { ok: false, error: err?.message || String(err) };
     }
@@ -523,21 +523,21 @@
   }
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg?.type === "inspectai:arm") {
+    if (msg?.type === "peek:arm") {
       arm();
       sendResponse({ ok: true });
       return;
     }
-    if (msg?.type === "inspectai:disarm") {
+    if (msg?.type === "peek:disarm") {
       disarm();
       sendResponse({ ok: true });
       return;
     }
-    if (msg?.type === "inspectai:status") {
+    if (msg?.type === "peek:status") {
       sendResponse({ ok: true, armed });
     }
   });
 
-  globalThis.__inspectai = { arm, disarm, isArmed: () => armed };
+  globalThis.__peek = { arm, disarm, isArmed: () => armed };
   arm();
 })();

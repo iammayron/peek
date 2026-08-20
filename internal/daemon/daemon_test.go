@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iammayron/inspectai/internal/paths"
-	"github.com/iammayron/inspectai/internal/rpc"
+	"github.com/iammayron/peek/internal/paths"
+	"github.com/iammayron/peek/internal/rpc"
 )
 
 func TestPinLatestRoundTrip(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("INSPECTAI_HOME", dir)
+	t.Setenv("PEEK_HOME", dir)
 	if err := paths.EnsureHome(); err != nil {
 		t.Fatal(err)
 	}

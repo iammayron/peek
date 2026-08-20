@@ -47,12 +47,12 @@ func (s Session) FreshReady(maxAge time.Duration) bool {
 
 func SessionMarkdown(pins []Pin) string {
 	if len(pins) == 0 {
-		return "No InspectAI pins."
+		return "No Peek pins."
 	}
 	if len(pins) == 1 {
 		return pins[0].Markdown()
 	}
-	md := "# InspectAI pinned " + strconv.Itoa(len(pins)) + " elements\n\n"
+	md := "# Peek pinned " + strconv.Itoa(len(pins)) + " elements\n\n"
 	for i, p := range pins {
 		label := p.Name
 		if label == "" {

@@ -277,7 +277,7 @@
     return clip(`${tag}${id}${cls}`, 60);
   }
 
-  globalThis.__INSPECTAI_SELECTOR__ = {
+  globalThis.__PEEK_SELECTOR__ = {
     describe,
     deepElementFromPoint,
     chipLabel,

@@ -1,4 +1,4 @@
-module github.com/iammayron/inspectai
+module github.com/iammayron/peek
 
 go 1.23
 

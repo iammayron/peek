@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	inspectai "github.com/iammayron/inspectai"
-	"github.com/iammayron/inspectai/internal/daemon"
-	"github.com/iammayron/inspectai/internal/install"
-	mcpserver "github.com/iammayron/inspectai/internal/mcp"
-	"github.com/iammayron/inspectai/internal/payload"
+	"github.com/iammayron/peek"
+	"github.com/iammayron/peek/internal/daemon"
+	"github.com/iammayron/peek/internal/install"
+	mcpserver "github.com/iammayron/peek/internal/mcp"
+	"github.com/iammayron/peek/internal/payload"
 )
 
 func main() {
@@ -49,7 +49,7 @@ func main() {
 	case "doctor":
 		install.Doctor()
 	case "version", "-v", "--version":
-		fmt.Printf("%s %s\n", inspectai.Name, inspectai.Version)
+		fmt.Printf("%s %s\n", peek.Name, peek.Version)
 	case "help", "-h", "--help":
 		usage()
 	default:
@@ -64,8 +64,8 @@ func main() {
 }
 
 func logNativeStart(why string) {
-	_ = os.MkdirAll(os.Getenv("HOME")+"/.inspectai", 0o700)
-	f, err := os.OpenFile(os.Getenv("HOME")+"/.inspectai/native-host.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	_ = os.MkdirAll(os.Getenv("HOME")+"/.peek", 0o700)
+	f, err := os.OpenFile(os.Getenv("HOME")+"/.peek/native-host.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return
 	}
@@ -82,7 +82,7 @@ func isTTY(f *os.File) bool {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `InspectAI %s — pin a DOM element for your coding agent.
+	fmt.Fprintf(os.Stderr, `Peek %s — pin a DOM element for your coding agent.
 
 Commands:
   install [--dev]   Register native host, daemon, MCP, and skills
@@ -96,10 +96,10 @@ Commands:
   version
 
 Install:
-  curl -fsSL https://raw.githubusercontent.com/iammayron/inspectai/main/install.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/iammayron/peek/main/install.sh | sh
 
-Then load the unpacked extension printed by install, press Alt+Shift+I, click.
-`, inspectai.Version)
+Then load the unpacked extension printed by install, press Alt+Shift+P, click.
+`, peek.Version)
 }
 
 func cmdLatest(args []string) error {

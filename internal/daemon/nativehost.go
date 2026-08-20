@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	inspectai "github.com/iammayron/inspectai"
-	"github.com/iammayron/inspectai/internal/nativemsg"
-	"github.com/iammayron/inspectai/internal/rpc"
+	"github.com/iammayron/peek"
+	"github.com/iammayron/peek/internal/nativemsg"
+	"github.com/iammayron/peek/internal/rpc"
 )
 
 func RunNativeHost() error {
@@ -29,7 +29,7 @@ func RunNativeHost() error {
 	}
 	defer events.Close()
 
-	hello := rpc.HelloParams{Role: "bridge", ExtensionID: inspectai.ExtensionID}
+	hello := rpc.HelloParams{Role: "bridge", ExtensionID: peek.ExtensionID}
 	if _, err := events.Call("hello", hello, 2*time.Second); err != nil {
 		return err
 	}

@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/iammayron/inspectai/internal/paths"
-	"github.com/iammayron/inspectai/internal/payload"
+	"github.com/iammayron/peek/internal/paths"
+	"github.com/iammayron/peek/internal/payload"
 )
 
 const hookMaxAge = 10 * time.Minute

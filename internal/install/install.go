@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	inspectai "github.com/iammayron/inspectai"
-	"github.com/iammayron/inspectai/internal/daemon"
-	"github.com/iammayron/inspectai/internal/paths"
-	"github.com/iammayron/inspectai/internal/rpc"
+	"github.com/iammayron/peek"
+	"github.com/iammayron/peek/internal/daemon"
+	"github.com/iammayron/peek/internal/paths"
+	"github.com/iammayron/peek/internal/rpc"
 )
 
 type Result struct {
@@ -82,7 +82,7 @@ func installBinary(exe string, dev bool) (string, error) {
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return "", err
 	}
-	dest := filepath.Join(destDir, "inspectai")
+	dest := filepath.Join(destDir, "peek")
 	if sameFile(exe, dest) {
 		return dest, nil
 	}
@@ -124,7 +124,7 @@ func binDir() (string, error) {
 }
 
 func writable(dir string) bool {
-	f, err := os.CreateTemp(dir, ".inspectai-write-*")
+	f, err := os.CreateTemp(dir, ".peek-write-*")
 	if err != nil {
 		return false
 	}
@@ -148,7 +148,7 @@ func installExtension(dev bool) (string, error) {
 	if err := os.MkdirAll(dest, 0o755); err != nil {
 		return "", err
 	}
-	if err := fs.WalkDir(inspectai.ExtensionFS, "extension", func(path string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(peek.ExtensionFS, "extension", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -160,7 +160,7 @@ func installExtension(dev bool) (string, error) {
 		if d.IsDir() {
 			return os.MkdirAll(target, 0o755)
 		}
-		data, err := inspectai.ExtensionFS.ReadFile(path)
+		data, err := peek.ExtensionFS.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -189,16 +189,16 @@ type nativeHostManifest struct {
 
 func installNativeHosts(bin string) (written []string, notes []string) {
 	manifest := nativeHostManifest{
-		Name:        inspectai.HostName,
-		Description: "InspectAI native messaging host",
+		Name:        peek.HostName,
+		Description: "Peek native messaging host",
 		Path:        bin,
 		Type:        "stdio",
 		AllowedOrigins: []string{
-			"chrome-extension://" + inspectai.ExtensionID + "/",
+			"chrome-extension://" + peek.ExtensionID + "/",
 		},
 	}
 	// Chrome launches this path with no extra args and piped stdio.
-	// inspectai with no args + non-TTY stdin enters native-host mode.
+	// peek with no args + non-TTY stdin enters native-host mode.
 	shim := filepath.Join(paths.Home(), "native-host.sh")
 	script := "#!/bin/sh\nexec \"" + bin + "\" native-host\n"
 	_ = os.WriteFile(shim, []byte(script), 0o755)
@@ -212,7 +212,7 @@ func installNativeHosts(bin string) (written []string, notes []string) {
 			notes = append(notes, dir+": "+err.Error())
 			continue
 		}
-		path := filepath.Join(dir, inspectai.HostName+".json")
+		path := filepath.Join(dir, peek.HostName+".json")
 		if err := os.WriteFile(path, body, 0o644); err != nil {
 			notes = append(notes, path+": "+err.Error())
 			continue
@@ -271,12 +271,12 @@ func installLaunchAgent(bin string) string {
 	}
 	dir := filepath.Join(home, "Library", "LaunchAgents")
 	_ = os.MkdirAll(dir, 0o755)
-	plistPath := filepath.Join(dir, "com.inspectai.daemon.plist")
+	plistPath := filepath.Join(dir, "com.iammayron.peek.daemon.plist")
 	plist := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.inspectai.daemon</string>
+  <key>Label</key><string>com.iammayron.peek.daemon</string>
   <key>ProgramArguments</key>
   <array>
     <string>%s</string>
@@ -306,9 +306,9 @@ func installSystemd(bin string) string {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return ""
 	}
-	path := filepath.Join(dir, "inspectai.service")
+	path := filepath.Join(dir, "peek.service")
 	unit := fmt.Sprintf(`[Unit]
-Description=InspectAI daemon
+Description=Peek daemon
 [Service]
 ExecStart=%s daemon
 Restart=on-failure
@@ -319,30 +319,30 @@ WantedBy=default.target
 		return ""
 	}
 	_ = exec.Command("systemctl", "--user", "daemon-reload").Run()
-	_ = exec.Command("systemctl", "--user", "enable", "--now", "inspectai.service").Run()
+	_ = exec.Command("systemctl", "--user", "enable", "--now", "peek.service").Run()
 	return path
 }
 
 func installSkills() {
 	home, _ := os.UserHomeDir()
 	targets := []struct{ root, dest string }{
-		{filepath.Join(home, ".grok"), filepath.Join(home, ".grok", "skills", "inspectai", "SKILL.md")},
-		{filepath.Join(home, ".claude"), filepath.Join(home, ".claude", "skills", "inspectai", "SKILL.md")},
-		{filepath.Join(home, ".codex"), filepath.Join(home, ".codex", "skills", "inspectai", "SKILL.md")},
+		{filepath.Join(home, ".grok"), filepath.Join(home, ".grok", "skills", "peek", "SKILL.md")},
+		{filepath.Join(home, ".claude"), filepath.Join(home, ".claude", "skills", "peek", "SKILL.md")},
+		{filepath.Join(home, ".codex"), filepath.Join(home, ".codex", "skills", "peek", "SKILL.md")},
 	}
 	for _, t := range targets {
 		if _, err := os.Stat(t.root); err != nil {
 			continue
 		}
 		_ = os.MkdirAll(filepath.Dir(t.dest), 0o755)
-		_ = os.WriteFile(t.dest, []byte(inspectai.SkillMD), 0o644)
+		_ = os.WriteFile(t.dest, []byte(peek.SkillMD), 0o644)
 	}
 }
 
 func installAgents(bin string) []string {
 	var ok []string
 	if _, err := exec.LookPath("grok"); err == nil {
-		cmd := exec.Command("grok", "mcp", "add", "inspectai", "--", bin, "mcp")
+		cmd := exec.Command("grok", "mcp", "add", "peek", "--", bin, "mcp")
 		if err := cmd.Run(); err == nil {
 			ok = append(ok, "grok")
 		} else {
@@ -354,7 +354,7 @@ func installAgents(bin string) []string {
 		ok = append(ok, "grok (config.toml)")
 	}
 	if _, err := exec.LookPath("claude"); err == nil {
-		cmd := exec.Command("claude", "mcp", "add", "--scope", "user", "inspectai", "--", bin, "mcp")
+		cmd := exec.Command("claude", "mcp", "add", "--scope", "user", "peek", "--", bin, "mcp")
 		if err := cmd.Run(); err == nil {
 			ok = append(ok, "claude")
 		} else if patchClaudeJSON(bin) {
@@ -364,7 +364,7 @@ func installAgents(bin string) []string {
 		ok = append(ok, "claude (json)")
 	}
 	if _, err := exec.LookPath("codex"); err == nil {
-		cmd := exec.Command("codex", "mcp", "add", "inspectai", "--", bin, "mcp")
+		cmd := exec.Command("codex", "mcp", "add", "peek", "--", bin, "mcp")
 		if err := cmd.Run(); err == nil {
 			ok = append(ok, "codex")
 		} else if patchTOML(filepath.Join(mustHome(), ".codex", "config.toml"), bin) {
@@ -385,7 +385,7 @@ func mustHome() string {
 }
 
 func mcpBlock(bin string) string {
-	return fmt.Sprintf("\n[mcp_servers.inspectai]\ncommand = %q\nargs = [\"mcp\"]\n", bin)
+	return fmt.Sprintf("\n[mcp_servers.peek]\ncommand = %q\nargs = [\"mcp\"]\n", bin)
 }
 
 func patchTOML(path, bin string) bool {
@@ -394,7 +394,7 @@ func patchTOML(path, bin string) bool {
 	}
 	data, _ := os.ReadFile(path)
 	s := string(data)
-	if strings.Contains(s, "[mcp_servers.inspectai]") {
+	if strings.Contains(s, "[mcp_servers.peek]") {
 		return true
 	}
 	_ = os.MkdirAll(filepath.Dir(path), 0o755)
@@ -425,7 +425,7 @@ func patchClaudeJSON(bin string) bool {
 		servers = map[string]any{}
 		root["mcpServers"] = servers
 	}
-	servers["inspectai"] = map[string]any{"command": bin, "args": []string{"mcp"}}
+	servers["peek"] = map[string]any{"command": bin, "args": []string{"mcp"}}
 	out, err := json.MarshalIndent(root, "", "  ")
 	if err != nil {
 		return false
@@ -450,7 +450,7 @@ func patchCursor(bin string) bool {
 		servers = map[string]any{}
 		root["mcpServers"] = servers
 	}
-	servers["inspectai"] = map[string]any{"command": bin, "args": []string{"mcp"}}
+	servers["peek"] = map[string]any{"command": bin, "args": []string{"mcp"}}
 	out, err := json.MarshalIndent(root, "", "  ")
 	if err != nil {
 		return false
@@ -459,11 +459,11 @@ func patchCursor(bin string) bool {
 }
 
 func Doctor() {
-	fmt.Printf("InspectAI %s\n", inspectai.Version)
+	fmt.Printf("Peek %s\n", peek.Version)
 	exe, _ := os.Executable()
 	fmt.Printf("  binary          %s\n", exe)
 	fmt.Printf("  home            %s\n", paths.Home())
-	fmt.Printf("  extension id    %s\n", inspectai.ExtensionID)
+	fmt.Printf("  extension id    %s\n", peek.ExtensionID)
 	fmt.Printf("  extension dir   %s\n", existLabel(paths.ExtensionDir()))
 	fmt.Printf("  native shim     %s\n", existLabel(filepath.Join(paths.Home(), "native-host.sh")))
 
@@ -487,19 +487,19 @@ func Doctor() {
 
 	n := 0
 	for _, dir := range nativeHostDirs() {
-		p := filepath.Join(dir, inspectai.HostName+".json")
+		p := filepath.Join(dir, peek.HostName+".json")
 		if _, err := os.Stat(p); err == nil {
 			fmt.Printf("  native host     %s\n", p)
 			n++
 		}
 	}
 	if n == 0 {
-		fmt.Printf("  native host     missing (run inspectai install)\n")
+		fmt.Printf("  native host     missing (run peek install)\n")
 	}
 	for _, pair := range [][2]string{
-		{"grok skill", filepath.Join(mustHome(), ".grok", "skills", "inspectai", "SKILL.md")},
-		{"claude skill", filepath.Join(mustHome(), ".claude", "skills", "inspectai", "SKILL.md")},
-		{"codex skill", filepath.Join(mustHome(), ".codex", "skills", "inspectai", "SKILL.md")},
+		{"grok skill", filepath.Join(mustHome(), ".grok", "skills", "peek", "SKILL.md")},
+		{"claude skill", filepath.Join(mustHome(), ".claude", "skills", "peek", "SKILL.md")},
+		{"codex skill", filepath.Join(mustHome(), ".codex", "skills", "peek", "SKILL.md")},
 	} {
 		fmt.Printf("  %-16s %s\n", pair[0], existLabel(pair[1]))
 	}
@@ -513,14 +513,14 @@ func existLabel(path string) string {
 }
 
 func PrintInstallHelp(res *Result) {
-	fmt.Println("InspectAI installed.")
+	fmt.Println("Peek installed.")
 	fmt.Println()
 	fmt.Println("  1. Open chrome://extensions")
 	fmt.Println("  2. Enable Developer mode")
 	fmt.Println("  3. Load unpacked →")
 	fmt.Printf("     %s\n", res.ExtensionDir)
 	fmt.Println()
-	fmt.Println("Click the InspectAI toolbar icon, pin elements, hit Done, paste in the agent.")
+	fmt.Println("Click the Peek toolbar icon, pin elements, hit Done, paste in the agent.")
 	fmt.Println()
 	fmt.Printf("binary:    %s\n", res.Binary)
 	if res.Launchd != "" {

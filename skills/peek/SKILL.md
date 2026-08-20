@@ -1,15 +1,15 @@
 ---
-name: inspectai
+name: peek
 description: >
-  Read the DOM element(s) the user pinned in their browser with InspectAI.
+  Read the DOM element(s) the user pinned in their browser with Peek.
   Use when the user says "this", "these", "this element", "the selected/inspected/pinned
-  elements", "look at this", "I selected", or runs /inspectai — before guessing
+  elements", "look at this", "I selected", or runs /peek — before guessing
   at CSS or which component to edit.
 ---
 
-# InspectAI
+# Peek
 
-The user pins nodes with the InspectAI **browser extension UI**: toolbar icon, click elements on the page, pills in the corner panel, **Done** (copies a prompt) or **Cancel**.
+The user pins nodes with the Peek **browser extension UI**: toolbar icon, click elements on the page, pills in the corner panel, **Done** (copies a prompt) or **Cancel**.
 
 Do not guess which node they mean. Fetch the session.
 
@@ -21,9 +21,9 @@ Call MCP `get_picked_element`. That returns the current session: screenshots, se
 
 ## When they have not pinned yet
 
-Do **not** tell them about Alt+Shift+I or Esc. Point them at the UI:
+Do **not** tell them about Alt+Shift+P or Esc. Point them at the UI:
 
-> Click the InspectAI icon in the browser toolbar. Click the elements in the page (they show up as pills). Hit **Done**, then paste here and say what to change.
+> Click the Peek icon in the browser toolbar. Click the elements in the page (they show up as pills). Hit **Done**, then paste here and say what to change.
 
 If they are going to pin *now*, you may call `wait_for_pick` (arms the panel and waits until they hit Done). Do not busy-loop `get_picked_element`.
 

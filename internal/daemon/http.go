@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	inspectai "github.com/iammayron/inspectai"
-	"github.com/iammayron/inspectai/internal/rpc"
+	"github.com/iammayron/peek"
+	"github.com/iammayron/peek/internal/rpc"
 )
 
 const HTTPPort = 17321
@@ -31,7 +31,7 @@ func (d *Daemon) startHTTP(ctx context.Context) {
 	}
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", HTTPPort))
 	if err != nil {
-		fmt.Printf("inspectai http: %v\n", err)
+		fmt.Printf("peek http: %v\n", err)
 		return
 	}
 	go func() {
@@ -51,9 +51,9 @@ func withCORS(next http.Handler) http.Handler {
 		if origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		} else {
-			w.Header().Set("Access-Control-Allow-Origin", "chrome-extension://"+inspectai.ExtensionID)
+			w.Header().Set("Access-Control-Allow-Origin", "chrome-extension://"+peek.ExtensionID)
 		}
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-InspectAI")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Peek")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 		w.Header().Set("Vary", "Origin")
 		if r.Method == http.MethodOptions {
@@ -68,7 +68,7 @@ func allowedOrigin(origin string) bool {
 	if origin == "" {
 		return true
 	}
-	want := "chrome-extension://" + inspectai.ExtensionID
+	want := "chrome-extension://" + peek.ExtensionID
 	return origin == want
 }
 

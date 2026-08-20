@@ -7,14 +7,14 @@ import (
 )
 
 func Home() string {
-	if h := os.Getenv("INSPECTAI_HOME"); h != "" {
+	if h := os.Getenv("PEEK_HOME"); h != "" {
 		return h
 	}
 	dir, err := os.UserHomeDir()
 	if err != nil {
 		dir = os.TempDir()
 	}
-	return filepath.Join(dir, ".inspectai")
+	return filepath.Join(dir, ".peek")
 }
 
 func Socket() string      { return filepath.Join(Home(), "rpc.sock") }
@@ -44,16 +44,16 @@ func appData() string {
 	}
 	switch runtime.GOOS {
 	case "darwin":
-		return filepath.Join(home, "Library", "Application Support", "inspectai")
+		return filepath.Join(home, "Library", "Application Support", "peek")
 	case "windows":
 		if base := os.Getenv("APPDATA"); base != "" {
-			return filepath.Join(base, "inspectai")
+			return filepath.Join(base, "peek")
 		}
-		return filepath.Join(home, "AppData", "Roaming", "inspectai")
+		return filepath.Join(home, "AppData", "Roaming", "peek")
 	default:
 		if base := os.Getenv("XDG_DATA_HOME"); base != "" {
-			return filepath.Join(base, "inspectai")
+			return filepath.Join(base, "peek")
 		}
-		return filepath.Join(home, ".local", "share", "inspectai")
+		return filepath.Join(home, ".local", "share", "peek")
 	}
 }

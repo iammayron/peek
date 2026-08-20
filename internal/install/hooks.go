@@ -44,7 +44,7 @@ func appendPromptHook(hooks map[string]any, command string) bool {
 	entries, _ := hooks["UserPromptSubmit"].([]any)
 	for _, e := range entries {
 		b, _ := json.Marshal(e)
-		if strings.Contains(string(b), "inspectai hook-prompt") {
+		if strings.Contains(string(b), "peek hook-prompt") {
 			return false
 		}
 	}

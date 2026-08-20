@@ -1,6 +1,6 @@
 /bin/
 /dist/
-/inspectai
+/peek
 *.exe
 .DS_Store
 .idea/

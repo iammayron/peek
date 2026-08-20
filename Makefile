@@ -4,16 +4,16 @@ icons:
 	go run ./tools/genicons extension/icons
 
 build: icons
-	go build -o bin/inspectai ./cmd/inspectai
+	go build -o bin/peek ./cmd/peek
 
 test:
 	go test ./...
 
 install: build
-	./bin/inspectai install --dev
+	./bin/peek install --dev
 
 dev: install
-	./bin/inspectai doctor
+	./bin/peek doctor
 
 dist:
 	rm -rf dist
@@ -21,9 +21,9 @@ dist:
 	@for pair in darwin/arm64 darwin/amd64 linux/arm64 linux/amd64; do \
 		os=$${pair%/*}; arch=$${pair#*/}; \
 		echo "building $$os/$$arch"; \
-		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags '-s -w' -o dist/inspectai ./cmd/inspectai; \
-		tar -C dist -czf dist/inspectai_$${os}_$${arch}.tar.gz inspectai; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags '-s -w' -o dist/peek ./cmd/peek; \
+		tar -C dist -czf dist/peek_$${os}_$${arch}.tar.gz peek; \
 	done
-	rm -f dist/inspectai
-	cd dist && shasum -a 256 inspectai_*.tar.gz > checksums.txt
+	rm -f dist/peek
+	cd dist && shasum -a 256 peek_*.tar.gz > checksums.txt
 	cat dist/checksums.txt

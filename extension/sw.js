@@ -5,7 +5,7 @@ const MAX_EDGE = 1600;
 let bridging = false;
 
 chrome.action.onClicked.addListener((tab) => {
-  togglePicker(tab).catch((err) => console.error("inspectai toggle", err));
+  togglePicker(tab).catch((err) => console.error("peek toggle", err));
 });
 
 chrome.commands.onCommand.addListener((command, tab) => {
@@ -13,7 +13,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
   (async () => {
     const target = tab || (await activeTab());
     if (target) await togglePicker(target);
-  })().catch((err) => console.error("inspectai command", err));
+  })().catch((err) => console.error("peek command", err));
 });
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -25,7 +25,7 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === "inspectai:pin") {
+  if (message?.type === "peek:pin") {
     (async () => {
       try {
         const tab = sender.tab;
@@ -35,22 +35,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await flashBadge(true);
         sendResponse({ ok: true, id: pin?.id || "" });
       } catch (err) {
-        console.error("inspectai pin", err);
+        console.error("peek pin", err);
         await flashBadge(false);
         sendResponse({ ok: false, error: err?.message || String(err) });
       }
     })();
     return true;
   }
-  if (message?.type === "inspectai:disarmed") {
+  if (message?.type === "peek:disarmed") {
     chrome.action.setBadgeText({ text: "" });
   }
-  if (message?.type === "inspectai:unpin") {
+  if (message?.type === "peek:unpin") {
     (async () => {
       try {
         await fetch(`${BRIDGE}/pin?id=${encodeURIComponent(message.id || "")}`, {
           method: "DELETE",
-          headers: { "X-InspectAI": "1" },
+          headers: { "X-Peek": "1" },
         });
         sendResponse({ ok: true });
       } catch (err) {
@@ -59,12 +59,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
-  if (message?.type === "inspectai:done") {
+  if (message?.type === "peek:done") {
     (async () => {
       try {
         const res = await fetch(`${BRIDGE}/done`, {
           method: "POST",
-          headers: { "X-InspectAI": "1" },
+          headers: { "X-Peek": "1" },
         });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body.error || res.statusText);
@@ -92,14 +92,14 @@ async function sendPin(payload, pngBase64, tab) {
   try {
     const http = await fetch(`${BRIDGE}/pin`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-InspectAI": "1" },
+      headers: { "Content-Type": "application/json", "X-Peek": "1" },
       body: JSON.stringify(msg),
     });
     if (http.ok) return await http.json();
   } catch (err) {
-    console.warn("inspectai http pin", err);
+    console.warn("peek http pin", err);
   }
-  throw new Error("bridge failed — is inspectai daemon running on 127.0.0.1:17321?");
+  throw new Error("bridge failed — is peek daemon running on 127.0.0.1:17321?");
 }
 
 async function keepBridge() {
@@ -107,21 +107,21 @@ async function keepBridge() {
   bridging = true;
   for (;;) {
     try {
-      const res = await fetch(`${BRIDGE}/arm?timeout=20`, { headers: { "X-InspectAI": "1" } });
+      const res = await fetch(`${BRIDGE}/arm?timeout=20`, { headers: { "X-Peek": "1" } });
       if (!res.ok) {
         await sleep(1500);
         continue;
       }
       const msg = await res.json();
       chrome.action.setBadgeText({ text: "" });
-      chrome.action.setTitle({ title: "InspectAI — pick an element (Alt+Shift+I)" });
+      chrome.action.setTitle({ title: "Peek — pick an element (Alt+Shift+P)" });
       if (msg?.type === "arm") {
         await armActiveTab();
       }
     } catch {
       chrome.action.setBadgeBackgroundColor({ color: "#C45C26" });
       chrome.action.setBadgeText({ text: "!" });
-      chrome.action.setTitle({ title: "InspectAI: daemon not reachable on 127.0.0.1:17321" });
+      chrome.action.setTitle({ title: "Peek: daemon not reachable on 127.0.0.1:17321" });
       await sleep(1500);
     }
   }
@@ -139,7 +139,7 @@ async function togglePicker(tab) {
   }
   const status = await pingContent(tab.id);
   if (status?.armed) {
-    await chrome.tabs.sendMessage(tab.id, { type: "inspectai:disarm" });
+    await chrome.tabs.sendMessage(tab.id, { type: "peek:disarm" });
     return;
   }
   await armTab(tab);
@@ -155,7 +155,7 @@ async function armTab(tab) {
   if (await isRestricted(tab)) return;
   const status = await pingContent(tab.id);
   if (status?.ok) {
-    await chrome.tabs.sendMessage(tab.id, { type: "inspectai:arm" });
+    await chrome.tabs.sendMessage(tab.id, { type: "peek:arm" });
     return;
   }
   await chrome.scripting.executeScript({
@@ -166,7 +166,7 @@ async function armTab(tab) {
 
 async function pingContent(tabId) {
   try {
-    return await chrome.tabs.sendMessage(tabId, { type: "inspectai:status" });
+    return await chrome.tabs.sendMessage(tabId, { type: "peek:status" });
   } catch {
     return null;
   }
