@@ -19,11 +19,18 @@
   let lastPoint = { x: 0, y: 0 };
   let pins = [];
   let pinning = false;
+  let finishing = false;
 
   function arm() {
     if (armed) return;
     armed = true;
+    finishing = false;
     mount();
+    const tray = shadow?.querySelector(".tray");
+    if (tray) tray.hidden = false;
+    const layer = shadow?.querySelector(".layer");
+    if (layer) layer.style.pointerEvents = "auto";
+    if (hud) hud.hidden = false;
     window.addEventListener("pointermove", onMove, true);
     window.addEventListener("pointerdown", onDown, true);
     window.addEventListener("click", onClick, true);
@@ -33,8 +40,9 @@
   }
 
   function disarm() {
-    if (!armed) return;
+    if (!armed && !finishing) return;
     armed = false;
+    finishing = false;
     window.removeEventListener("pointermove", onMove, true);
     window.removeEventListener("pointerdown", onDown, true);
     window.removeEventListener("click", onClick, true);
@@ -149,7 +157,7 @@
           letter-spacing: 0.08em;
           padding: 8px 14px;
           border: 1px solid #C8FF4D;
-          z-index: 5;
+          z-index: 20;
           pointer-events: none;
           text-transform: uppercase;
         }
@@ -213,17 +221,25 @@
         .tray-actions {
           display: flex;
           justify-content: flex-end;
+          gap: 8px;
           margin-top: 10px;
         }
-        .done {
-          border: 0;
-          background: #C8FF4D;
-          color: #14120E;
+        .cancel, .done {
           font: inherit;
           letter-spacing: 0.08em;
           text-transform: uppercase;
           padding: 6px 12px;
           cursor: pointer;
+        }
+        .cancel {
+          border: 1px solid #C8FF4D;
+          background: transparent;
+          color: #C8FF4D;
+        }
+        .done {
+          border: 0;
+          background: #C8FF4D;
+          color: #14120E;
         }
         .done:disabled {
           opacity: 0.35;
@@ -236,18 +252,23 @@
         <span class="tick bl"></span><span class="tick br"></span>
       </div>
       <div class="chip" hidden></div>
-      <div class="hud">Click to pin · <kbd>Done</kbd> when finished · <kbd>Esc</kbd> cancels</div>
+      <div class="hud">Click to pin · <kbd>Done</kbd> or <kbd>Cancel</kbd></div>
       <aside class="tray">
         <div class="tray-title">Pinned</div>
         <div class="pills"><span class="empty">None yet</span></div>
-        <div class="tray-actions"><button class="done" type="button" disabled>Done</button></div>
+        <div class="tray-actions">
+          <button class="done" type="button" disabled>Done</button>
+          <button class="cancel" type="button">Cancel</button>
+        </div>
       </aside>
     `;
     box = shadow.querySelector(".box");
     chip = shadow.querySelector(".chip");
     hud = shadow.querySelector(".hud");
     const doneBtn = shadow.querySelector(".done");
+    const cancelBtn = shadow.querySelector(".cancel");
     doneBtn.addEventListener("click", onDone);
+    cancelBtn.addEventListener("click", onCancel);
     document.documentElement.appendChild(host);
   }
 
@@ -434,16 +455,45 @@
       }
     }
     showToast(res?.ok
-      ? "Copied · Grok: look at this · Claude/Codex: send your next prompt"
+      ? "Copied. Paste into the agent, then say what to change."
       : `Done failed · ${res?.error || "no daemon"}`);
-    await sleep(1600);
+    if (!res?.ok) return;
+    hidePicker();
+    await sleep(3000);
+    disarm();
+  }
+
+  function hidePicker() {
+    finishing = true;
+    armed = false;
+    window.removeEventListener("pointermove", onMove, true);
+    window.removeEventListener("pointerdown", onDown, true);
+    window.removeEventListener("click", onClick, true);
+    window.removeEventListener("keydown", onKey, true);
+    window.removeEventListener("scroll", onScroll, true);
+    window.removeEventListener("resize", onScroll, true);
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    lastEl = null;
+    const tray = shadow?.querySelector(".tray");
+    if (tray) tray.hidden = true;
+    const layer = shadow?.querySelector(".layer");
+    if (layer) layer.style.pointerEvents = "none";
+    if (box) box.hidden = true;
+    if (chip) chip.hidden = true;
+    if (hud) hud.hidden = true;
+  }
+
+  function onCancel(e) {
+    e.preventDefault();
+    e.stopPropagation();
     disarm();
   }
 
   function onKey(e) {
     if (e.key === "Escape") {
       e.preventDefault();
-      disarm();
+      onCancel(e);
     }
   }
 
