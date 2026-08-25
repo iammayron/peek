@@ -1,72 +1,89 @@
+@layer reset, base;
+
 :root {
-  --paper: #f4f1ea;
-  --card: #fffefb;
-  --ink: #14120e;
-  --muted: #6f6a5c;
-  --rule: #d9d3c4;
-  --hairline: #14120e;
-  --lime: #c8ff4d;
-  --lime-wash: rgba(200, 255, 77, 0.28);
-  --accent: #4a6300;
-  --chip-bg: #14120e;
-  --shadow: 0 1px 0 rgba(20, 18, 14, 0.08);
+  --night: #0a0a0c;
+  --elev: #141416;
+  --ink: #f4f4f5;
+  --mute: #a1a1aa;
+  --line: rgb(255 255 255 / 0.08);
+  --reticle: #c8ff4d;
+  --reticle-dim: color-mix(in oklab, var(--reticle) 18%, transparent);
   --sans: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
   --mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --pad: clamp(20px, 5vw, 68px);
-  --band: clamp(48px, 7vw, 88px);
+  --pad: clamp(1.25rem, 4vw, 3rem);
+  --measure: 72rem;
+  --radius: 1.25rem;
 }
 
-* {
-  box-sizing: border-box;
+@layer reset {
+  html {
+    box-sizing: border-box;
+    color-scheme: dark;
+  }
+
+  :where(*, *::before, *::after) {
+    box-sizing: inherit;
+  }
+
+  :where(html, body) {
+    margin: 0;
+  }
+
+  :where(h1, h2, h3, p, figure, pre, ol, ul) {
+    margin: 0;
+  }
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
+@layer base {
+  body {
+    background: var(--night);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 1.0625rem;
+    font-weight: 400;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
 
-body {
-  background: var(--paper);
-  color: var(--ink);
-  font: 400 16.5px/1.6 var(--sans);
-  -webkit-font-smoothing: antialiased;
-}
+  h1,
+  h2 {
+    font-weight: 600;
+    letter-spacing: -0.045em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
 
-h1,
-h2 {
-  font-family: var(--sans);
-  font-weight: 500;
-  margin: 0;
-  text-wrap: balance;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-}
+  p {
+    text-wrap: pretty;
+  }
 
-p {
-  margin: 0;
-}
+  a {
+    color: inherit;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
 
-a {
-  color: var(--accent);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
+  :where(code, kbd, pre) {
+    font-family: var(--mono);
+    letter-spacing: 0;
+  }
 
-code,
-kbd,
-pre {
-  font-family: var(--mono);
-}
+  kbd {
+    font-size: 0.75em;
+    border: 1px solid var(--line);
+    background: var(--elev);
+    padding: 0.05em 0.4em;
+    border-radius: 0.35rem;
+  }
 
-kbd {
-  font-size: 12px;
-  border: 1px solid var(--rule);
-  background: var(--card);
-  padding: 1px 5px;
-}
+  :focus-visible {
+    outline: 2px solid var(--reticle);
+    outline-offset: 3px;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
 }
