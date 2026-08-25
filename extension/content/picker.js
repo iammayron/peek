@@ -132,7 +132,7 @@
           top: 14px;
           left: 50%;
           transform: translateX(-50%);
-          pointer-events: none;
+          pointer-events: auto;
           background: #14120E;
           color: #F4F1EA;
           font: 12px/1.3 "IBM Plex Mono", "SF Mono", ui-monospace, Menlo, monospace;
@@ -252,7 +252,7 @@
         <span class="tick bl"></span><span class="tick br"></span>
       </div>
       <div class="chip" hidden></div>
-      <div class="hud">Click to pin · <kbd>Done</kbd> or <kbd>Cancel</kbd></div>
+      <div class="hud">Click to pin · <kbd>Enter</kbd> done · <kbd>Esc</kbd> cancel</div>
       <aside class="tray">
         <div class="tray-title">Pinned</div>
         <div class="pills"><span class="empty">None yet</span></div>
@@ -282,8 +282,16 @@
   }
 
   function onMove(e) {
-    if (inTray(e)) return;
     lastPoint = { x: e.clientX, y: e.clientY };
+    if (inChrome(e)) {
+      lastEl = null;
+      const overPill = e.composedPath().some((n) => n.classList?.contains?.("pill"));
+      if (!overPill) {
+        if (box) box.hidden = true;
+        if (chip) chip.hidden = true;
+      }
+      return;
+    }
     if (raf) return;
     raf = requestAnimationFrame(() => {
       raf = 0;
@@ -296,13 +304,20 @@
     paint(lastPoint.x, lastPoint.y);
   }
 
+  function isPeekUi(el) {
+    if (!el) return false;
+    if (el === host || el.id === HOST_ID) return true;
+    if (shadow && el.getRootNode?.() === shadow) return true;
+    return false;
+  }
+
   function hit(x, y) {
     const layer = shadow?.querySelector(".layer");
     if (layer) layer.style.pointerEvents = "none";
     const el = sel()?.deepElementFromPoint(x, y);
     if (layer) layer.style.pointerEvents = "auto";
     if (!el || el === document.documentElement || el === document.body) return null;
-    if (el.id === HOST_ID || el.closest?.(`#${HOST_ID}`)) return null;
+    if (isPeekUi(el)) return null;
     return el;
   }
 
@@ -332,20 +347,23 @@
     chip.style.top = `${cy}px`;
   }
 
-  function inTray(e) {
-    return e.composedPath().some((n) => n.classList?.contains?.("tray"));
+  function inChrome(e) {
+    return e.composedPath().some((n) => {
+      if (!n.classList) return false;
+      return n.classList.contains("tray") || n.classList.contains("hud");
+    });
   }
 
   function onDown(e) {
     if (!armed) return;
-    if (inTray(e)) return;
+    if (inChrome(e)) return;
     e.preventDefault();
     e.stopPropagation();
   }
 
   async function onClick(e) {
     if (!armed || pinning) return;
-    if (inTray(e)) return;
+    if (inChrome(e)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     const el = lastEl || hit(e.clientX, e.clientY);
@@ -438,9 +456,9 @@
   }
 
   async function onDone(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (pins.length === 0) return;
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (!armed || finishing || pins.length === 0) return;
     let res;
     try {
       res = await chrome.runtime.sendMessage({ type: "peek:done" });
@@ -485,15 +503,23 @@
   }
 
   function onCancel(e) {
-    e.preventDefault();
-    e.stopPropagation();
+    e?.preventDefault();
+    e?.stopPropagation();
     disarm();
   }
 
   function onKey(e) {
+    if (e.repeat) return;
     if (e.key === "Escape") {
       e.preventDefault();
+      e.stopPropagation();
       onCancel(e);
+      return;
+    }
+    if (e.key === "Enter" && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      onDone(e);
     }
   }
 
