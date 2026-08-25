@@ -1,18 +1,18 @@
-import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Azeret_Mono, Schibsted_Grotesk } from "next/font/google";
 import { GITHUB_URL, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
-const plexSans = IBM_Plex_Sans({
+const grotesk = Schibsted_Grotesk({
   variable: "--font-sans",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  display: "swap",
 });
 
-const plexMono = IBM_Plex_Mono({
+const azeret = Azeret_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -58,9 +58,13 @@ export const metadata: Metadata = {
   category: "developer tools",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#0a0a0c",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${grotesk.variable} ${azeret.variable}`}>
       <body>{children}</body>
     </html>
   );

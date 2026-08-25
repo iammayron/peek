@@ -5,75 +5,72 @@
   <title>Peek OG</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600&display=swap" rel="stylesheet">
   <style>
     html, body { margin: 0; padding: 0; }
     body {
       width: 1200px;
       height: 630px;
-      background: #16140F;
-      color: #F2F0E9;
-      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      background: #0a0a0c;
+      color: #f4f4f5;
+      font-family: "Schibsted Grotesk", "Helvetica Neue", sans-serif;
       display: flex;
       flex-direction: column;
+      align-items: center;
       justify-content: center;
+      text-align: center;
       padding: 72px 80px;
       box-sizing: border-box;
       position: relative;
+      overflow: hidden;
     }
-    .c {
+    body::before {
+      content: "";
       position: absolute;
-      width: 54px;
-      height: 54px;
-      border: 4px solid #C8FF4D;
+      inset: 20% -10% -20%;
+      background:
+        radial-gradient(50% 50% at 50% 80%, rgba(200, 255, 77, 0.2), transparent 70%),
+        radial-gradient(40% 70% at 0% 70%, rgba(200, 255, 77, 0.12), transparent 70%),
+        radial-gradient(40% 70% at 100% 70%, rgba(200, 255, 77, 0.12), transparent 70%);
+      pointer-events: none;
     }
-    .tl { top: 36px; left: 36px; border-right: 0; border-bottom: 0; }
-    .tr { top: 36px; right: 36px; border-left: 0; border-bottom: 0; }
-    .bl { bottom: 36px; left: 36px; border-right: 0; border-top: 0; }
-    .br { bottom: 36px; right: 36px; border-left: 0; border-top: 0; }
     .kicker {
       font-size: 16px;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: #C8FF4D;
+      color: #a1a1aa;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px;
+      padding: 8px 16px;
+      margin: 0;
+      position: relative;
     }
     h1 {
-      font-size: 108px;
-      font-weight: 700;
-      letter-spacing: -4px;
-      margin: 18px 0 0;
-      line-height: 0.95;
-    }
-    .tag {
-      font-size: 28px;
-      color: #C8FF4D;
-      margin-top: 28px;
+      font-size: 72px;
+      font-weight: 600;
+      letter-spacing: -0.045em;
+      margin: 28px 0 0;
+      line-height: 1.05;
+      position: relative;
     }
     .sub {
       font-size: 22px;
-      color: #9a9384;
-      margin-top: 14px;
-      max-width: 34em;
+      color: #a1a1aa;
+      margin-top: 22px;
+      max-width: 22em;
       line-height: 1.4;
+      position: relative;
     }
     .host {
       position: absolute;
-      bottom: 48px;
-      right: 80px;
+      bottom: 40px;
       font-size: 16px;
-      color: #8B897F;
+      color: #71717a;
     }
   </style>
 </head>
 <body>
-  <div class="c tl"></div>
-  <div class="c tr"></div>
-  <div class="c bl"></div>
-  <div class="c br"></div>
-  <div class="kicker">Chrome extension + local daemon</div>
-  <h1>PEEK</h1>
-  <div class="tag">You pick. The model looks.</div>
-  <div class="sub">Point at a node in your real browser. Coding agents get the selector, a slice of HTML, and a cropped screenshot.</div>
+  <p class="kicker">Chrome extension + local daemon</p>
+  <h1>You point at a node.<br>The agent gets the node.</h1>
+  <p class="sub">Selector, HTML slice, cropped screenshot. Localhost only.</p>
   <div class="host">peek.mayronalves.com</div>
 </body>
 </html>

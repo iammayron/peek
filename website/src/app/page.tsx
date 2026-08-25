@@ -1,147 +1,219 @@
 import Link from "next/link";
 import { CopyCommand } from "@/components/CopyCommand";
 import { Demo } from "@/components/Demo";
-import { GITHUB_URL } from "@/lib/site";
+import { GITHUB_URL, HOME_URL, PIZZA_URL, STORE_URL } from "@/lib/site";
 import styles from "./page.module.css";
 
-function PeekMark() {
+function PeekMark({ size }: { size: number }) {
   return (
-    <svg viewBox="0 0 512 512" aria-hidden="true">
-      <g
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="26"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M156 96 L96 96 L96 156" />
-        <path d="M356 96 L416 96 L416 156" />
-        <path d="M96 356 L96 416 L156 416" />
-        <path d="M416 356 L416 416 L356 416" />
-      </g>
-      <path
-        d="M128 256 Q256 140 384 256 Q256 372 128 256 Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="26"
-        strokeLinejoin="round"
-      />
-      <circle cx="256" cy="256" r="40" fill="#c8ff4d" stroke="currentColor" strokeWidth="14" />
-    </svg>
+    <img
+      src="/peek-mark.png"
+      alt=""
+      width={size}
+      height={size}
+      className={styles.mark}
+    />
+  );
+}
+
+function PinShortcut() {
+  return (
+    <span className={styles.keys}>
+      <kbd>Alt</kbd>
+      <span className={styles.or}>or</span>
+      <kbd>Opt</kbd>
+      <span className={styles.plus}>+</span>
+      <kbd>Shift</kbd>
+      <span className={styles.plus}>+</span>
+      <kbd>P</kbd>
+    </span>
   );
 }
 
 export default function Home() {
   return (
     <>
+      <link
+        rel="preload"
+        as="image"
+        href="/demo-poster.png"
+        fetchPriority="high"
+      />
+
       <header className={styles.masthead}>
-        <Link className={styles.brand} href="/">
-          <PeekMark />
-          Peek
-        </Link>
-        <nav>
-          <a href="#install">Install</a>
-          <a href="#local">Local</a>
-          <a href={GITHUB_URL}>GitHub</a>
-        </nav>
+        <div className={styles.bar}>
+          <a className={styles.back} href={HOME_URL}>
+            ‹ mayronalves.com
+          </a>
+          <Link className={styles.brand} href="/">
+            <PeekMark size={28} />
+            Peek.
+          </Link>
+          <a className={styles.gh} href={GITHUB_URL}>
+            GitHub
+          </a>
+        </div>
       </header>
 
-      <section className={styles.band}>
-        <div className={`${styles.wrap} ${styles.hero}`}>
-          <h1 className={styles.lede}>
-            You point at a DOM node; your coding agent gets the selector, a slice
-            of HTML, and a cropped screenshot.
+      <main>
+        <section className={styles.hero}>
+          <h1 className={styles.lockup}>
+            <PeekMark size={72} />
+            Peek.
           </h1>
-          <Demo />
+          <p className={styles.lede}>
+            You point at a node. The agent gets the&nbsp;node.
+          </p>
           <div className={styles.install} id="install">
-            <CopyCommand />
+            <p className={styles.need}>
+              You need both: the Chrome extension and the local daemon.
+            </p>
+            <ol className={styles.setup}>
+              <li>
+                <p className={styles.stepLabel}>1. Chrome extension</p>
+                <a className={styles.store} href={STORE_URL}>
+                  Install from Chrome Web Store
+                </a>
+              </li>
+              <li>
+                <p className={styles.stepLabel}>2. Local daemon</p>
+                <CopyCommand />
+              </li>
+            </ol>
             <p className={styles.fine}>
-              Then load the unpacked extension from the path{" "}
-              <code>peek install --dev</code> prints. Press{" "}
-              <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> to pin. Also{" "}
-              <code>make install</code> or{" "}
-              <a href={`${GITHUB_URL}/blob/main/install.sh`}>install.sh</a>.
+              Then press <PinShortcut />
             </p>
           </div>
-        </div>
-      </section>
+          <Demo />
+        </section>
 
-      <section className={styles.band}>
-        <div className={styles.wrap}>
-          <div className={styles.eyebrow}>The loop</div>
-          <h2>Chrome extension plus a local Go daemon. Not a browser-driving agent.</h2>
-          <div className={styles.steps}>
-            <article className={styles.step}>
-              <div className={styles["step-n"]}>01</div>
+        <section className={styles.block} aria-labelledby="loop-heading">
+          <h2 id="loop-heading">Arm, pin, look.</h2>
+          <p className={styles.lead}>
+            Chrome extension plus a local Go daemon. Not a browser-driving
+            agent. You stay in the page you already have open.
+          </p>
+          <ol className={styles.cards}>
+            <li className={styles.card}>
               <h3>Arm</h3>
               <p>
-                Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> or click the
-                toolbar icon. A crosshair covers the page you are already in.
+                Press <PinShortcut /> or click the toolbar icon. A crosshair
+                covers the page you are already in.
               </p>
-            </article>
-            <article className={styles.step}>
-              <div className={styles["step-n"]}>02</div>
+            </li>
+            <li className={styles.card}>
               <h3>Pin</h3>
-              <p>Click a node. Peek writes the selector, HTML slice, and a crop of that element.</p>
-            </article>
-            <article className={styles.step}>
-              <div className={styles["step-n"]}>03</div>
+              <p>
+                Click a node. Peek writes the strongest selector it can find, a
+                slice of HTML, and a cropped screenshot of that element.
+              </p>
+            </li>
+            <li className={styles.card}>
               <h3>Look</h3>
               <p>
-                Paste into the agent, or let it read <code>~/.peek/</code>. You pick.
-                The model looks.
+                Paste the pin into the agent, or let it read{" "}
+                <code>~/.peek/</code>. Works with Grok Build, Claude Code,
+                Codex, and Cursor.
               </p>
-            </article>
-          </div>
-          <pre className={styles.payload} aria-label="Example pin payload">
-            <span className={styles.c}># Pinned element</span>
-            {"\n\n"}
-            - Selector (<span className={styles.k}>data-testid</span>):{" "}
-            <span className={styles.k}>[data-testid=&quot;save&quot;]</span>
-            {"\n"}
-            - Tag: <span className={styles.k}>button</span>
-            {"\n"}
-            - Screenshot: ~/.peek/latest.png
-            {"\n\n"}
-            <span className={styles.c}>```html</span>
-            {"\n"}
-            &lt;button class=&quot;primary&quot; type=&quot;submit&quot; data-testid=&quot;save&quot;&gt;Save
-            changes&lt;/button&gt;
-            {"\n"}
-            <span className={styles.c}>```</span>
-          </pre>
-        </div>
-      </section>
+            </li>
+          </ol>
+        </section>
 
-      <section className={styles.band} id="local">
-        <div className={styles.wrap}>
-          <div className={styles.eyebrow}>Local by default</div>
-          <h2>Your DOM never leaves the machine.</h2>
-          <div className={styles.facts}>
-            <div className={styles.fact}>
-              <b>Localhost only</b>
+        <section className={styles.block} aria-labelledby="gets-heading">
+          <h2 id="gets-heading">What the agent gets</h2>
+          <p className={styles.lead}>
+            One pin is three artifacts. The model can see the node, not guess
+            at a screenshot of the whole page.
+          </p>
+          <ul className={styles.cards}>
+            <li className={styles.card}>
+              <h3>Selector</h3>
               <p>
-                The extension talks to a helper on <code>127.0.0.1</code>. No
-                account. No sign-in.
+                Prefer <code>data-testid</code>, then <code>id</code>, then a
+                path. The agent targets the same node you clicked.
               </p>
-            </div>
-            <div className={styles.fact}>
-              <b>Owner-only files</b>
+              <code className={styles.sample}>[data-testid=&quot;save&quot;]</code>
+            </li>
+            <li className={styles.card}>
+              <h3>HTML slice</h3>
+              <p>
+                A cropped <code>outerHTML</code> of that element, not the whole
+                document. Enough structure to edit it.
+              </p>
+              <code className={styles.sample}>
+                {`<button type="submit">
+  Save changes
+</button>`}
+              </code>
+            </li>
+            <li className={styles.card}>
+              <h3>Screenshot</h3>
+              <p>
+                A PNG crop of the node, with a little padding. Lands at{" "}
+                <code>~/.peek/latest.png</code>.
+              </p>
+              <code className={styles.sample}>~/.peek/latest.png</code>
+            </li>
+          </ul>
+        </section>
+
+        <section className={styles.block} aria-labelledby="local-heading">
+          <h2 id="local-heading">Your DOM never leaves the machine.</h2>
+          <p className={styles.lead}>
+            The extension talks to a helper on localhost. Nothing is measured
+            or sent home.
+          </p>
+          <ul className={styles.cards}>
+            <li className={styles.card}>
+              <h3>Localhost only</h3>
+              <p>
+                The daemon binds <code>127.0.0.1</code>. No account. No
+                sign-in.
+              </p>
+            </li>
+            <li className={styles.card}>
+              <h3>Owner-only files</h3>
               <p>
                 Pins live in <code>~/.peek/</code> with mode <code>0600</code>.
                 Delete the directory and they are gone.
               </p>
-            </div>
-            <div className={styles.fact}>
-              <b>No telemetry</b>
-              <p>Nothing is measured or sent home. The daemon only answers the extension you installed.</p>
-            </div>
+            </li>
+            <li className={styles.card}>
+              <h3>No telemetry</h3>
+              <p>
+                The daemon only answers the extension you installed. That is
+                the whole network.
+              </p>
+            </li>
+          </ul>
+        </section>
+
+        <section className={styles.block} aria-labelledby="dev-heading">
+          <h2 id="dev-heading">About the developer</h2>
+          <div className={styles.blurb}>
+            <p>
+              I am Mayron. Peek is free, MIT licensed, and stays on your
+              machine. I ship other tools the same way.
+            </p>
+            <p>
+              If this saved you a round trip, a pizza helps me keep building
+              free apps.
+            </p>
           </div>
-        </div>
-      </section>
+          <div className={styles.actions}>
+            <a className={styles.ghost} href={HOME_URL}>
+              mayronalves.com
+            </a>
+            <a className={styles.pizza} href={PIZZA_URL}>
+              Buy me a pizza
+            </a>
+          </div>
+        </section>
+      </main>
 
       <footer className={styles.footer}>
-        <span>Peek — pin a live DOM node for coding agents. MIT licensed.</span>
+        <span>Peek. MIT licensed.</span>
+        <a href={HOME_URL}>mayronalves.com</a>
         <a href={GITHUB_URL}>github.com/iammayron/peek</a>
       </footer>
     </>
