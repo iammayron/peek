@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Peek",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Point at a page element and send it \u2014 selector, DOM, and a cropped screenshot \u2014 to your coding agent.",
   "minimum_chrome_version": "116",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzl+9unlI8YFNEKHOv0mS6tebz8Vz0pBGcOGUH0ZBL05b9ND+tXTm/x3RRXstvLWY/+92i3cBE0Jxlt4kMSECrizhXF7GAqkO/WOeMe/MjQVValbHTQ/youqsAcWcsdVVO1HVg2DEO1lYKvdRoxLbmxCPsQbxFwscVRb8wLg5V60jNwrAGoHOmSHaMovDTxQM4WkQGW16RuLhAuMkdUxhdtR5ke/yvB9pdQWpsD37kxA+Ny/gAK/2HRiYHGraAn4/Y7Ai0fQ3eHBNtcd2iF3nWQN30U3gQxw+MfuXUx5HF6fTtKTRtGFocRIoVLY2NjRyqGdW7Z0eNfzsRr2YdbDf/QIDAQAB",

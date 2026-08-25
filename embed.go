@@ -15,7 +15,7 @@ var SkillMD string
 const (
 	Name     = "peek"
 	Pretty   = "Peek"
-	Version  = "0.2.2"
+	Version  = "0.2.3"
 	HostName = "com.iammayron.peek.host"
 	// ExtensionID is the unpacked build, pinned by the manifest key.
 	ExtensionID = "pddflklmmojokihfohpdcncbkbfhceak"
