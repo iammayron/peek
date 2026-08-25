@@ -1,0 +1,39 @@
+.shot {
+  margin: 0;
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  box-shadow: 8px 8px 0 var(--lime-wash);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--hairline);
+  font: 400 11.5px/1 var(--mono);
+  color: var(--muted);
+}
+
+.bar i {
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  flex: none;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #0a0908;
+  aspect-ratio: 16 / 9;
+}
+
+.shot figcaption {
+  padding: 12px 14px;
+  border-top: 1px solid var(--rule);
+  font: 400 12.5px/1.5 var(--mono);
+  color: var(--muted);
+}

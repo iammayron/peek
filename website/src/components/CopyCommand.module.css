@@ -1,0 +1,39 @@
+.cmd {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--hairline);
+  background: var(--chip-bg);
+  box-shadow: 4px 4px 0 var(--lime-wash);
+  max-width: 560px;
+}
+
+.cmd pre {
+  flex: 1;
+  margin: 0;
+  padding: 13px 15px;
+  overflow: auto;
+}
+
+.cmd code {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: #f4f1ea;
+  white-space: pre;
+}
+
+.cmd button {
+  flex: none;
+  border: 0;
+  border-left: 1px solid var(--hairline);
+  background: var(--lime);
+  color: #14120e;
+  font: 500 11px/1 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.cmd button:hover {
+  background: #d9ff80;
+}
