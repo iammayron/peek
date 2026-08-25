@@ -1,4 +1,6 @@
-<img src="extension/icons/icon-512.png" alt="Peek" width="96" align="right">
+<p align="center">
+  <img src="extension/icons/icon-512.png" alt="Peek" width="96">
+</p>
 
 # Peek
 
