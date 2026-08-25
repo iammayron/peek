@@ -26,6 +26,7 @@ type Result struct {
 	Agents       []string
 	Launchd      string
 	Notes        []string
+	Dev          bool
 }
 
 func Install(dev bool) (*Result, error) {
@@ -41,7 +42,7 @@ func Install(dev bool) (*Result, error) {
 		exe, _ = os.Executable()
 	}
 
-	res := &Result{}
+	res := &Result{Dev: dev}
 	bin, err := installBinary(exe, dev)
 	if err != nil {
 		return nil, err
@@ -519,24 +520,29 @@ func existLabel(path string) string {
 	return path
 }
 
-func PrintInstallHelp(res *Result) {
-	fmt.Println("Peek installed.")
-	fmt.Println()
-	fmt.Println("  1. Open chrome://extensions")
-	fmt.Println("  2. Enable Developer mode")
-	fmt.Println("  3. Load unpacked →")
-	fmt.Printf("     %s\n", res.ExtensionDir)
-	fmt.Println()
-	fmt.Println("Click the Peek toolbar icon, pin elements, hit Done, paste in the agent.")
-	fmt.Println()
-	fmt.Printf("binary:    %s\n", res.Binary)
+func PrintInstallHelp(w io.Writer, res *Result) {
+	fmt.Fprintln(w, "Peek installed.")
+	fmt.Fprintln(w)
+	if res.Dev {
+		fmt.Fprintln(w, "  1. Open chrome://extensions")
+		fmt.Fprintln(w, "  2. Enable Developer mode")
+		fmt.Fprintln(w, "  3. Load unpacked →")
+		fmt.Fprintf(w, "     %s\n", res.ExtensionDir)
+	} else {
+		fmt.Fprintln(w, "  Install the extension from the Chrome Web Store:")
+		fmt.Fprintf(w, "  %s\n", peek.StoreURL)
+	}
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Click the Peek toolbar icon, pin elements, hit Done, paste in the agent.")
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "binary:    %s\n", res.Binary)
 	if res.Launchd != "" {
-		fmt.Printf("service:   %s\n", res.Launchd)
+		fmt.Fprintf(w, "service:   %s\n", res.Launchd)
 	}
 	if len(res.Agents) > 0 {
-		fmt.Printf("agents:    %s\n", strings.Join(res.Agents, ", "))
+		fmt.Fprintf(w, "agents:    %s\n", strings.Join(res.Agents, ", "))
 	}
 	for _, n := range res.Notes {
-		fmt.Printf("note:      %s\n", n)
+		fmt.Fprintf(w, "note:      %s\n", n)
 	}
 }

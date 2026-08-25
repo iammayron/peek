@@ -1,10 +1,13 @@
 package install
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	peek "github.com/iammayron/peek"
 )
 
 func TestAppendPromptHookRepointsMovedBinary(t *testing.T) {
@@ -58,5 +61,19 @@ func TestPatchTOMLReplacesStaleBlock(t *testing.T) {
 	again, _ := os.ReadFile(path)
 	if string(again) != s {
 		t.Fatalf("not idempotent:\n%s\n---\n%s", s, again)
+	}
+}
+
+func TestPrintInstallHelpTargetsTheStoreUnlessDev(t *testing.T) {
+	var buf bytes.Buffer
+	PrintInstallHelp(&buf, &Result{Binary: "/opt/homebrew/bin/peek", ExtensionDir: "/tmp/ext"})
+	if out := buf.String(); !strings.Contains(out, peek.StoreURL) || strings.Contains(out, "Load unpacked") {
+		t.Fatalf("store install should point at the listing, got:\n%s", out)
+	}
+
+	buf.Reset()
+	PrintInstallHelp(&buf, &Result{Binary: "./bin/peek", ExtensionDir: "/tmp/ext", Dev: true})
+	if out := buf.String(); !strings.Contains(out, "/tmp/ext") || strings.Contains(out, peek.StoreURL) {
+		t.Fatalf("dev install should point at the unpacked dir, got:\n%s", out)
 	}
 }

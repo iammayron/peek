@@ -23,11 +23,12 @@ curl -fsSL https://raw.githubusercontent.com/iammayron/peek/main/install.sh | sh
 
 Then:
 
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. **Load unpacked** → the path `peek install` printed (`…/peek/extension`, or `./extension` in `--dev`)
-4. Press **Alt+Shift+P** (or click the toolbar icon), click an element
-5. In the agent: “look at this” / “this button is overflowing”
+1. Install the extension from the [Chrome Web Store](https://chromewebstore.google.com/detail/peek/afalnlminndnlfgnlphbelelpcblcbld)
+2. Press **Alt+Shift+P** (or click the toolbar icon), click an element
+3. In the agent: “look at this” / “this button is overflowing”
+
+Working on Peek itself? `make install` runs `peek install --dev`, which prints an
+unpacked extension dir to load from `chrome://extensions` with Developer mode on.
 
 `peek doctor` tells you if the daemon, native host, and last pin are healthy.
 

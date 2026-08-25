@@ -143,7 +143,7 @@ func cmdInstall(args []string) error {
 	if err != nil {
 		return err
 	}
-	install.PrintInstallHelp(res)
+	install.PrintInstallHelp(os.Stdout, res)
 	fmt.Println()
 	install.Doctor()
 	return nil
