@@ -52,6 +52,10 @@ unpacked extension dir to load from `chrome://extensions` with Developer mode on
 
 `peek doctor` tells you if the daemon, native host, and last pin are healthy.
 
+## Website
+
+The public landing lives in [`website/`](website/) and deploys as a static export to [peek.mayronalves.com](https://peek.mayronalves.com) on Cloudflare Pages (root directory `website`). Next.js and Remotion stay isolated there; the Go Makefile is unchanged.
+
 ## Commands
 
 | | |

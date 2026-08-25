@@ -1,0 +1,72 @@
+:root {
+  --paper: #f4f1ea;
+  --card: #fffefb;
+  --ink: #14120e;
+  --muted: #6f6a5c;
+  --rule: #d9d3c4;
+  --hairline: #14120e;
+  --lime: #c8ff4d;
+  --lime-wash: rgba(200, 255, 77, 0.28);
+  --accent: #4a6300;
+  --chip-bg: #14120e;
+  --shadow: 0 1px 0 rgba(20, 18, 14, 0.08);
+  --sans: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
+  --mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --pad: clamp(20px, 5vw, 68px);
+  --band: clamp(48px, 7vw, 88px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 16.5px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2 {
+  font-family: var(--sans);
+  font-weight: 500;
+  margin: 0;
+  text-wrap: balance;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--mono);
+}
+
+kbd {
+  font-size: 12px;
+  border: 1px solid var(--rule);
+  background: var(--card);
+  padding: 1px 5px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}

@@ -1,0 +1,29 @@
+{
+  "name": "peek-website",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "preview": "python3 -m http.server 4173 --directory out --bind 127.0.0.1",
+    "lint": "eslint",
+    "remotion": "remotion studio remotion/index.ts",
+    "render": "remotion render remotion/index.ts PeekDemo public/demo.mp4",
+    "still": "remotion still remotion/index.ts PeekDemo public/demo-poster.png --frame=150"
+  },
+  "dependencies": {
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@remotion/cli": "^4.0.517",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.3",
+    "remotion": "^4.0.517",
+    "typescript": "^5"
+  }
+}

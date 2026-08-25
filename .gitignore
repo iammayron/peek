@@ -6,3 +6,6 @@
 .idea/
 .vscode/
 *.log
+website/node_modules/
+website/.next/
+website/out/
