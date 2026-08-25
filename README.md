@@ -1,3 +1,5 @@
+<img src="extension/icons/icon-512.png" alt="Peek" width="96" align="right">
+
 # Peek
 
 Point at a DOM node in your real browser. Grok Build, Claude Code, Codex, and Cursor get the selector, a slice of HTML, and a cropped screenshot.

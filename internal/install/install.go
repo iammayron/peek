@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -187,15 +188,21 @@ type nativeHostManifest struct {
 	AllowedOrigins []string `json:"allowed_origins"`
 }
 
+func allowedOrigins() []string {
+	out := make([]string, 0, len(peek.ExtensionIDs))
+	for _, id := range peek.ExtensionIDs {
+		out = append(out, "chrome-extension://"+id+"/")
+	}
+	return out
+}
+
 func installNativeHosts(bin string) (written []string, notes []string) {
 	manifest := nativeHostManifest{
-		Name:        peek.HostName,
-		Description: "Peek native messaging host",
-		Path:        bin,
-		Type:        "stdio",
-		AllowedOrigins: []string{
-			"chrome-extension://" + peek.ExtensionID + "/",
-		},
+		Name:           peek.HostName,
+		Description:    "Peek native messaging host",
+		Path:           bin,
+		Type:           "stdio",
+		AllowedOrigins: allowedOrigins(),
 	}
 	// Chrome launches this path with no extra args and piped stdio.
 	// peek with no args + non-TTY stdin enters native-host mode.
@@ -394,18 +401,18 @@ func patchTOML(path, bin string) bool {
 	}
 	data, _ := os.ReadFile(path)
 	s := string(data)
-	if strings.Contains(s, "[mcp_servers.peek]") {
+	block := mcpBlock(bin)
+	if strings.Contains(s, block) {
 		return true
 	}
+	// Drop a previous block (its command may point at a moved binary) before appending.
+	s = tomlBlockRE.ReplaceAllString(s, "")
 	_ = os.MkdirAll(filepath.Dir(path), 0o755)
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-	_, err = f.WriteString(mcpBlock(bin))
-	return err == nil
+	return os.WriteFile(path, []byte(strings.TrimRight(s, "\n")+"\n"+block), 0o644) == nil
 }
+
+// tomlBlockRE matches our [mcp_servers.peek] table up to the next table header.
+var tomlBlockRE = regexp.MustCompile(`(?m)^\[mcp_servers\.peek\]\n(?:(?:[^\[\n][^\n]*)?\n)*`)
 
 func patchClaudeJSON(bin string) bool {
 	path := filepath.Join(mustHome(), ".claude.json")

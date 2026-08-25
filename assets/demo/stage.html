@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Peek demo stage</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root { --ink:#14120e; --term:#0f0e0b; --cream:#e7e3d6; --lime:#c8ff4d; --dim:#8d8776; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; }
+  body {
+    width:1600px; height:900px; background:#0a0908; display:grid;
+    grid-template-columns: 1000px 600px; font-family:"IBM Plex Mono", ui-monospace, monospace;
+    overflow:hidden;
+  }
+
+  /* ---- browser pane ---- */
+  .browser { display:flex; flex-direction:column; border-right:1px solid #2a2620; }
+  .chrome { display:flex; align-items:center; gap:12px; padding:10px 14px; background:#1b1815; border-bottom:1px solid #2a2620; }
+  .dots { display:flex; gap:6px; }
+  .dots i { width:11px; height:11px; border-radius:50%; background:#3a352c; }
+  .url { flex:1; background:#0f0e0b; border:1px solid #2a2620; border-radius:4px; padding:6px 10px; font-size:12px; color:var(--dim); }
+  .viewport { flex:1; position:relative; background:#f4f1ea; }
+  iframe { position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
+
+  /* ---- terminal pane ---- */
+  .terminal { background:var(--term); display:flex; flex-direction:column; }
+  .tbar { display:flex; align-items:center; justify-content:center; padding:9px; background:#151310; border-bottom:1px solid #2a2620; font-size:11.5px; color:var(--dim); letter-spacing:0.08em; }
+  .screen { flex:1; padding:16px 18px; font-size:13px; line-height:1.55; color:var(--cream); white-space:pre-wrap; word-break:break-word; overflow:hidden; }
+  .screen b { color:var(--lime); font-weight:500; }      /* prompt sigil */
+  .screen i { color:var(--dim); font-style:normal; }      /* dim output */
+  .screen u { color:#fff; text-decoration:none; }         /* typed command */
+  .screen s { color:var(--lime); text-decoration:none; }  /* highlighted value */
+  .caret { display:inline-block; width:7.5px; height:15px; background:var(--lime); vertical-align:-3px; }
+  .caret.off { opacity:0; }
+</style>
+</head>
+<body>
+  <section class="browser">
+    <div class="chrome">
+      <div class="dots"><i></i><i></i><i></i></div>
+      <div class="url">127.0.0.1:8899/testdata/pages/fixture.html</div>
+    </div>
+    <div class="viewport"><iframe id="app" src="/testdata/pages/fixture.html"></iframe></div>
+  </section>
+
+  <section class="terminal">
+    <div class="tbar">zsh &mdash; peek</div>
+    <div class="screen" id="screen"></div>
+  </section>
+
+<script>
+(() => {
+  const screen = document.getElementById("screen");
+  let caret = null;
+
+  function ensureCaret() {
+    if (!caret) { caret = document.createElement("span"); caret.className = "caret"; }
+    screen.appendChild(caret);
+  }
+
+  window.stage = {
+    // a new shell prompt line
+    prompt() {
+      const b = document.createElement("b");
+      b.textContent = "~/app ❯ ";
+      screen.appendChild(b);
+      ensureCaret();
+    },
+    // one keystroke of the command being typed
+    key(ch) {
+      const u = document.createElement("u");
+      u.textContent = ch;
+      screen.insertBefore(u, caret);
+    },
+    // commit the line
+    enter() {
+      screen.insertBefore(document.createTextNode("\n"), caret);
+    },
+    // print output; `dim` renders it muted, `mark` highlights matching text
+    out(text, opts) {
+      opts = opts || {};
+      const node = opts.dim ? document.createElement("i") : document.createElement("span");
+      node.textContent = text;
+      screen.insertBefore(node, caret);
+      screen.insertBefore(document.createTextNode("\n"), caret);
+      this.trim();
+    },
+    // paste arrives as a block, not keystrokes
+    paste(text) {
+      const s = document.createElement("s");
+      s.textContent = text;
+      screen.insertBefore(s, caret);
+    },
+    caretOff() { if (caret) caret.classList.add("off"); },
+    caretOn() { if (caret) caret.classList.remove("off"); },
+    // keep the screen scrolled to the bottom like a real terminal
+    trim() { screen.scrollTop = screen.scrollHeight; },
+    clear() { screen.textContent = ""; caret = null; },
+  };
+})();
+</script>
+</body>
+</html>

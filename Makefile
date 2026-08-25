@@ -1,9 +1,6 @@
-.PHONY: icons build test install dev dist
+.PHONY: build test install dev dist
 
-icons:
-	go run ./tools/genicons extension/icons
-
-build: icons
+build:
 	go build -o bin/peek ./cmd/peek
 
 test:

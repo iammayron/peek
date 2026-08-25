@@ -42,18 +42,25 @@ func patchJSONHooks(path, command string) bool {
 
 func appendPromptHook(hooks map[string]any, command string) bool {
 	entries, _ := hooks["UserPromptSubmit"].([]any)
+	before, _ := json.Marshal(entries)
+	kept := make([]any, 0, len(entries)+1)
 	for _, e := range entries {
 		b, _ := json.Marshal(e)
-		if strings.Contains(string(b), "peek hook-prompt") {
-			return false
+		// Drop our own entries, stale binary path included, and re-add one below.
+		if !strings.Contains(string(b), "peek hook-prompt") {
+			kept = append(kept, e)
 		}
 	}
-	entry := map[string]any{
+	kept = append(kept, map[string]any{
 		"matcher": "",
 		"hooks": []any{
 			map[string]any{"type": "command", "command": command},
 		},
+	})
+	after, _ := json.Marshal(kept)
+	if string(before) == string(after) {
+		return false
 	}
-	hooks["UserPromptSubmit"] = append(entries, entry)
+	hooks["UserPromptSubmit"] = kept
 	return true
 }

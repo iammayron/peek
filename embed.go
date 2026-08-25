@@ -13,9 +13,15 @@ var ExtensionFS embed.FS
 var SkillMD string
 
 const (
-	Name        = "peek"
-	Pretty      = "Peek"
-	Version     = "0.2.0"
-	HostName    = "com.iammayron.peek.host"
+	Name     = "peek"
+	Pretty   = "Peek"
+	Version  = "0.2.1"
+	HostName = "com.iammayron.peek.host"
+	// ExtensionID is the unpacked build, pinned by the manifest key.
 	ExtensionID = "pddflklmmojokihfohpdcncbkbfhceak"
+	// StoreExtensionID is the Chrome Web Store build, which the store ids itself.
+	StoreExtensionID = "afalnlminndnlfgnlphbelelpcblcbld"
 )
+
+// ExtensionIDs are the builds allowed to talk to the daemon.
+var ExtensionIDs = []string{ExtensionID, StoreExtensionID}

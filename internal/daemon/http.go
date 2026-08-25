@@ -68,8 +68,12 @@ func allowedOrigin(origin string) bool {
 	if origin == "" {
 		return true
 	}
-	want := "chrome-extension://" + peek.ExtensionID
-	return origin == want
+	for _, id := range peek.ExtensionIDs {
+		if origin == "chrome-extension://"+id {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *Daemon) handleHTTPStatus(w http.ResponseWriter, r *http.Request) {

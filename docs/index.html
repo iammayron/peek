@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peek</title>
+<meta name="description" content="Point at a DOM node in your real browser. Your coding agent gets the selector, the HTML, and a cropped screenshot.">
+<link rel="icon" href="img/icon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #f4f1ea;
+    --card: #fffefb;
+    --ink: #14120e;
+    --muted: #6f6a5c;
+    --rule: #d9d3c4;
+    --hairline: #14120e;
+    --lime: #c8ff4d;
+    --lime-wash: rgba(200, 255, 77, 0.28);
+    --accent: #4a6300;
+    --chip-fg: #c8ff4d;
+    --chip-bg: #14120e;
+    --shadow: 0 1px 0 rgba(20, 18, 14, 0.08);
+
+    --display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --pad: clamp(20px, 5vw, 68px);
+    --band: clamp(56px, 8vw, 104px);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14120e;
+      --card: #1c1a14;
+      --ink: #f4f1ea;
+      --muted: #9a9384;
+      --rule: #322e24;
+      --hairline: #3d382c;
+      --lime-wash: rgba(200, 255, 77, 0.16);
+      --accent: #c8ff4d;
+      --shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #14120e;
+    --card: #1c1a14;
+    --ink: #f4f1ea;
+    --muted: #9a9384;
+    --rule: #322e24;
+    --hairline: #3d382c;
+    --lime-wash: rgba(200, 255, 77, 0.16);
+    --accent: #c8ff4d;
+    --shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 16.5px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3 { font-family: var(--display); font-weight: 800; margin: 0; text-wrap: balance; letter-spacing: -0.02em; line-height: 1.02; }
+  p { margin: 0; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  code, kbd, pre { font-family: var(--mono); }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* ---------- structural bands ---------- */
+
+  .band { border-bottom: 1px solid var(--hairline); padding: var(--band) var(--pad); }
+  .band--tight { padding-top: clamp(30px, 4vw, 52px); padding-bottom: clamp(30px, 4vw, 52px); }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  .eyebrow {
+    font: 500 11.5px/1 var(--mono);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 20px;
+    height: 8px;
+    background: var(--lime);
+    border: 1px solid var(--hairline);
+    flex: none;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 16px var(--pad);
+    border-bottom: 1px solid var(--hairline);
+    position: sticky;
+    top: 0;
+    background: var(--paper);
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    z-index: 40;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; font: 600 17px/1 var(--mono); letter-spacing: 0.04em; }
+  .brand svg { display: block; width: 26px; height: 26px; }
+  .masthead nav { display: flex; align-items: center; gap: 22px; font: 500 12.5px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+  .masthead nav a { color: var(--muted); text-decoration: none; }
+  .masthead nav a:hover { color: var(--ink); }
+  @media (max-width: 720px) { .masthead nav a.hide-sm { display: none; } }
+
+  /* ---------- hero ---------- */
+
+  .hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 72px); align-items: start; }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; } }
+
+  h1 { font-size: clamp(44px, 8vw, 92px); margin: 22px 0 0; }
+  h1 span { display: block; }
+  h1 em {
+    font-style: normal;
+    white-space: nowrap;
+    margin-left: -0.07em;
+    padding: 0 0.07em;
+    background-image: linear-gradient(to top, var(--lime-wash) 0.34em, transparent 0.34em);
+    box-shadow: inset 0 -2px 0 var(--lime);
+  }
+  .lede { font-size: clamp(17px, 1.6vw, 20px); color: var(--muted); max-width: 46ch; margin-top: 22px; }
+  .lede strong { color: var(--ink); font-weight: 500; }
+
+  .install { margin-top: 30px; display: flex; flex-direction: column; gap: 10px; max-width: 560px; }
+  .cmd {
+    display: flex; align-items: stretch;
+    border: 1px solid var(--hairline);
+    background: var(--chip-bg);
+    box-shadow: 4px 4px 0 var(--lime-wash);
+  }
+  .cmd code { flex: 1; padding: 13px 15px; font-size: 13px; color: #f4f1ea; white-space: pre-wrap; word-break: break-all; }
+  .cmd code b { color: var(--lime); font-weight: 400; }
+  .cmd button {
+    flex: none; border: 0; border-left: 1px solid var(--hairline);
+    background: var(--lime); color: #14120e;
+    font: 500 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 0 16px; cursor: pointer;
+  }
+  .cmd button:hover { background: #d9ff80; }
+  .fine { font: 400 12.5px/1.5 var(--mono); color: var(--muted); }
+  .fine a { color: var(--accent); }
+
+  /* ---------- live readout rail ---------- */
+
+  .readout { border: 1px solid var(--hairline); background: var(--card); box-shadow: var(--shadow); }
+  .readout-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; border-bottom: 1px solid var(--hairline);
+    font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);
+  }
+  .dot { width: 7px; height: 7px; background: var(--lime); border: 1px solid var(--hairline); border-radius: 50%; }
+  .readout dl { display: grid; grid-template-columns: 84px minmax(0, 1fr); margin: 0; font-family: var(--mono); font-size: 12.5px; }
+  .readout dt { padding: 9px 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; font-size: 10.5px; border-bottom: 1px solid var(--rule); }
+  .readout dd { margin: 0; padding: 9px 14px; border-bottom: 1px solid var(--rule); border-left: 1px solid var(--rule); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .readout dl > :nth-last-child(-n+2) { border-bottom: 0; }
+  .readout-foot { padding: 11px 14px; border-top: 1px solid var(--hairline); font: 400 11.5px/1.45 var(--mono); color: var(--muted); }
+
+  /* ---------- inspectable affordance ---------- */
+
+  [data-peek] { cursor: crosshair; }
+  .hint {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 11px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase;
+    border: 1px dashed var(--hairline); padding: 7px 11px; color: var(--muted); margin-top: 26px;
+  }
+  .hint b { color: var(--ink); font-weight: 500; }
+
+  #peek-box {
+    position: fixed; pointer-events: none; z-index: 30;
+    border: 1px solid var(--lime); background: var(--lime-wash);
+    opacity: 0; transition: opacity 90ms linear, transform 90ms ease-out;
+  }
+  #peek-chip {
+    position: fixed; pointer-events: none; z-index: 31;
+    background: var(--chip-bg); color: var(--chip-fg);
+    font: 500 11px/1 var(--mono); padding: 5px 7px; white-space: nowrap;
+    opacity: 0; transition: opacity 90ms linear;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #peek-box, #peek-chip { transition: none; }
+  }
+
+  /* ---------- pin tray ---------- */
+
+  #tray {
+    position: fixed; right: 18px; bottom: 18px; z-index: 45;
+    width: 268px; background: var(--chip-bg); border: 1px solid var(--hairline);
+    padding: 11px; font-family: var(--mono); box-shadow: 6px 6px 0 var(--lime-wash);
+  }
+  #tray .t-title { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: #9a9384; }
+  #tray .pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 0 11px; }
+  #tray .empty { font-size: 11.5px; color: #6f6a5c; }
+  #tray .pill { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--lime); color: var(--lime); font-size: 11px; padding: 3px 6px; max-width: 100%; }
+  #tray .pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #tray .pill button { background: none; border: 0; color: var(--lime); cursor: pointer; padding: 0; font-size: 12px; line-height: 1; }
+  #tray .t-actions { display: flex; gap: 7px; justify-content: flex-end; }
+  #tray .t-actions button {
+    font: 500 10.5px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 7px 11px; cursor: pointer; border: 1px solid var(--lime); background: none; color: var(--lime);
+  }
+  #tray .t-actions .done { background: var(--lime); color: #14120e; }
+  #tray .t-actions .done:disabled { opacity: 0.35; cursor: not-allowed; }
+  #toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+    background: var(--chip-bg); color: var(--chip-fg); border: 1px solid var(--lime);
+    font: 500 11.5px/1 var(--mono); padding: 10px 14px; z-index: 46;
+    opacity: 0; pointer-events: none; transition: opacity 160ms linear;
+  }
+  #toast.on { opacity: 1; }
+  @media (max-width: 620px) { #tray { display: none; } }
+
+  /* ---------- steps ---------- */
+
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); margin-top: 38px; }
+  @media (max-width: 860px) { .steps { grid-template-columns: 1fr; } }
+  .step { background: var(--card); padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+  .step-n { font: 500 11px/1 var(--mono); letter-spacing: 0.14em; color: var(--muted); }
+  .step h3 { font-size: 21px; }
+  .step p { font-size: 14.5px; color: var(--muted); }
+  .step kbd { font-size: 12px; border: 1px solid var(--rule); background: var(--paper); padding: 1px 5px; }
+
+  .shot { margin: 34px 0 0; border: 1px solid var(--hairline); background: var(--card); box-shadow: 8px 8px 0 var(--lime-wash); }
+  .shot-bar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--hairline); font: 400 11.5px/1 var(--mono); color: var(--muted); }
+  .shot-bar i { width: 8px; height: 8px; border: 1px solid var(--rule); border-radius: 50%; flex: none; }
+  .shot img, .shot video { display: block; width: 100%; height: auto; background: var(--paper); }
+  .shot figcaption { padding: 12px 14px; border-top: 1px solid var(--rule); font: 400 12.5px/1.5 var(--mono); color: var(--muted); }
+  .shot-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); margin-top: 1px; }
+  @media (max-width: 700px) { .shot-pair { grid-template-columns: 1fr; } }
+  .shot-pair figure { margin: 0; background: var(--card); }
+  .shot-pair img { display: block; width: 100%; height: auto; }
+  .shot-pair figcaption { padding: 10px 12px; border-top: 1px solid var(--rule); font: 400 11.5px/1.45 var(--mono); color: var(--muted); }
+
+  /* ---------- payload ---------- */
+
+  .payload { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); margin-top: 38px; align-items: start; }
+  @media (max-width: 900px) { .payload { grid-template-columns: 1fr; } }
+  pre.block {
+    margin: 0; background: var(--chip-bg); color: #e7e3d6; border: 1px solid var(--hairline);
+    padding: 18px; font-size: 12.5px; line-height: 1.65; overflow-x: auto; box-shadow: 5px 5px 0 var(--lime-wash);
+  }
+  pre.block .k { color: var(--lime); }
+  pre.block .c { color: #8d8776; }
+  pre.block .s { color: #dcd6c2; }
+
+  .fields { display: grid; gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); }
+  .field { background: var(--card); padding: 12px 15px; display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: 14px; align-items: baseline; }
+  @media (max-width: 620px) { .field { grid-template-columns: 1fr; gap: 3px; } }
+  .field code { font-size: 12.5px; color: var(--accent); }
+  .field span { font-size: 14px; color: var(--muted); }
+
+  /* ---------- agents + commands ---------- */
+
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); margin-top: 38px; align-items: start; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+
+  .agents { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding: 0; }
+  .agents li { list-style: none; border: 1px solid var(--hairline); padding: 8px 12px; font: 500 12.5px/1 var(--mono); background: var(--card); }
+
+  table.cmds { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
+  table.cmds th { text-align: left; font-weight: 500; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); padding: 0 0 10px; border-bottom: 1px solid var(--hairline); }
+  table.cmds td { padding: 11px 12px 11px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  table.cmds td:first-child { white-space: nowrap; color: var(--accent); }
+  table.cmds td:last-child { color: var(--muted); font-family: var(--sans); font-size: 14px; padding-right: 0; }
+
+  /* ---------- privacy ---------- */
+
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); margin-top: 34px; }
+  @media (max-width: 860px) { .facts { grid-template-columns: 1fr; } }
+  .fact { background: var(--card); padding: 20px; }
+  .fact b { display: block; font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 9px; }
+  .fact p { font-size: 14.5px; color: var(--muted); }
+
+  /* ---------- closing ---------- */
+
+  .close-band { text-align: left; }
+  .close-band h2 { font-size: clamp(32px, 5vw, 58px); }
+  footer { padding: 26px var(--pad); display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; font: 400 12.5px/1.5 var(--mono); color: var(--muted); }
+  footer a { color: var(--muted); }
+
+  .stagger > * { opacity: 0; animation: rise 620ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+  .stagger > *:nth-child(1) { animation-delay: 40ms; }
+  .stagger > *:nth-child(2) { animation-delay: 110ms; }
+  .stagger > *:nth-child(3) { animation-delay: 180ms; }
+  .stagger > *:nth-child(4) { animation-delay: 250ms; }
+  .stagger > *:nth-child(5) { animation-delay: 320ms; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .stagger > * { animation: none; opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="brand">
+    <svg viewBox="0 0 512 512" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M156 96 L96 96 L96 156"/><path d="M356 96 L416 96 L416 156"/>
+        <path d="M96 356 L96 416 L156 416"/><path d="M416 356 L416 416 L356 416"/>
+      </g>
+      <path d="M128 256 Q256 140 384 256 Q256 372 128 256 Z" fill="none" stroke="currentColor" stroke-width="26" stroke-linejoin="round"/>
+      <circle cx="256" cy="256" r="40" fill="#c8ff4d" stroke="currentColor" stroke-width="14"/>
+    </svg>
+    Peek
+  </div>
+  <nav>
+    <a href="#loop" class="hide-sm">The loop</a>
+    <a href="#payload" class="hide-sm">What it sends</a>
+    <a href="#local" class="hide-sm">Local</a>
+    <a href="https://github.com/iammayron/peek">GitHub</a>
+  </nav>
+</header>
+
+<section class="band">
+  <div class="wrap hero">
+    <div class="stagger">
+      <div class="eyebrow">Chrome extension + local CLI</div>
+      <h1><span>Stop describing the bug.</span><em class="claim" data-peek>Point at it.</em></h1>
+      <p class="lede">Click an element in your real browser. Your coding agent gets the
+        <strong>unique selector</strong>, the <strong>element HTML</strong>, its computed styles, and a
+        <strong>cropped screenshot</strong>. Not a whole-page screenshot. Not a description. The node.</p>
+      <div class="install">
+        <div class="cmd">
+          <code id="install-cmd">curl -fsSL https://raw.githubusercontent.com/iammayron/peek/main/install.sh | <b>sh</b></code>
+          <button type="button" data-copy="#install-cmd">Copy</button>
+        </div>
+        <p class="fine">macOS and Linux &middot; installs the CLI, the MCP server, and the agent skill &middot;
+          <a href="https://github.com/iammayron/peek">source on GitHub</a></p>
+      </div>
+      <div class="hint" data-peek>&#8599; <b>This page is inspectable.</b> Click anything to pin it.</div>
+    </div>
+
+    <aside class="readout" aria-live="off">
+      <div class="readout-head"><span>Live readout</span><span class="dot"></span></div>
+      <dl>
+        <dt>Tag</dt><dd id="r-tag">&mdash;</dd>
+        <dt>Selector</dt><dd id="r-sel">hover an element</dd>
+        <dt>Box</dt><dd id="r-box">&mdash;</dd>
+        <dt>Font</dt><dd id="r-font">&mdash;</dd>
+        <dt>Color</dt><dd id="r-color">&mdash;</dd>
+      </dl>
+      <p class="readout-foot">The extension reads the same values from the page you are actually building, then hands them to the agent.</p>
+    </aside>
+  </div>
+</section>
+
+<section class="band" id="loop">
+  <div class="wrap">
+    <div class="eyebrow">The loop</div>
+    <h2 style="font-size:clamp(30px,4.4vw,50px);margin-top:18px;max-width:24ch;">Three clicks from &ldquo;this is broken&rdquo; to a working prompt.</h2>
+    <div class="steps">
+      <article class="step">
+        <div class="step-n">STEP 01</div>
+        <h3 data-peek>Arm the picker</h3>
+        <p>Click the Peek icon or press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>. A crosshair layer covers the page and a tray docks in the corner.</p>
+      </article>
+      <article class="step">
+        <div class="step-n">STEP 02</div>
+        <h3 data-peek>Pin what matters</h3>
+        <p>Click one element or several. Each becomes a pill in the tray, captured with its own cropped screenshot. Shadow DOM included.</p>
+      </article>
+      <article class="step">
+        <div class="step-n">STEP 03</div>
+        <h3 data-peek>Hit Done, then paste</h3>
+        <p>Done copies a prompt to your clipboard. Paste it into the agent and say what to change &mdash; it reads the pins straight from disk.</p>
+      </article>
+    </div>
+
+    <figure class="shot">
+      <div class="shot-bar"><i></i><i></i><i></i><span>localhost:3000/billing</span></div>
+      <video id="demo" poster="img/demo-poster.png" width="1600" height="900"
+             autoplay muted loop playsinline preload="metadata"
+             aria-label="Screen recording: peek doctor runs, peek wait blocks, two elements are pinned in the browser, the terminal prints the pinned element, and the prompt is pasted into the agent">
+        <source src="img/demo.webm" type="video/webm">
+        <source src="img/demo.mp4" type="video/mp4">
+      </video>
+      <figcaption>The whole loop, real time: <code>peek wait</code> blocks in the terminal, you pick two elements in the browser, and the pinned element comes back out on the left &mdash; selector, XPath, markup &mdash; ready to paste into the agent.</figcaption>
+    </figure>
+    <div class="shot-pair">
+      <figure>
+        <img src="img/screenshot-2-armed.png" alt="The picker armed, highlighting the Save changes button with a button.primary chip" width="1280" height="800" loading="lazy">
+        <figcaption>Armed. Hovering <code>button.primary</code>.</figcaption>
+      </figure>
+      <figure>
+        <img src="img/screenshot-3-copied.png" alt="A toast confirming the prompt was copied to the clipboard" width="1280" height="800" loading="lazy">
+        <figcaption>Done. The prompt is on the clipboard.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="payload">
+  <div class="wrap">
+    <div class="eyebrow">What your agent receives</div>
+    <h2 style="font-size:clamp(30px,4.4vw,50px);margin-top:18px;max-width:26ch;">A selector it can grep for, not a screenshot it has to guess at.</h2>
+    <div class="payload">
+      <pre class="block" aria-label="Example of the markdown a pinned element produces"><span class="c"># Pinned element</span>
+
+- URL: <span class="s">http://127.0.0.1:8899/testdata/pages/fixture.html</span>
+- Title: <span class="s">Peek fixture</span>
+- Selector (<span class="k">data-testid</span>): <span class="k">[data-testid="save-billing"]</span>
+- XPath: <span class="k">//*[@id="billing"]//form[1]/button[1]</span>
+- Tag: <span class="k">button</span>
+- Role: button &mdash; Save changes
+- Screenshot: <span class="s">~/.peek/latest.png</span>
+
+<span class="c">```html</span>
+<span class="s">&lt;button class="primary" type="submit" data-testid="save-billing"&gt;Save changes&lt;/button&gt;</span>
+<span class="c">```</span></pre>
+      <div>
+        <div class="fields">
+          <div class="field"><code>selector</code><span>Shortest selector that resolves to exactly this node, with the strategy that produced it</span></div>
+          <div class="field"><code>xpath</code><span>Absolute path, for when the selector is fragile</span></div>
+          <div class="field"><code>outerHTML</code><span>The element markup, truncated for long trees</span></div>
+          <div class="field"><code>styles</code><span>Computed styles as the browser actually resolved them</span></div>
+          <div class="field"><code>rect</code><span>Box, viewport size, and device pixel ratio</span></div>
+          <div class="field"><code>role</code><span>Accessible role and name, as assistive tech would read it</span></div>
+          <div class="field"><code>screenshot</code><span>PNG cropped to the element with padding, not the full page</span></div>
+          <div class="field"><code>inShadow</code><span>Flagged when the node lives inside a shadow root</span></div>
+        </div>
+        <p class="fine" style="margin-top:14px;">Read it with the MCP tool, the agent skill, or <code>peek latest --md</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <div class="eyebrow">Wired into the agent you already use</div>
+    <div class="cols">
+      <div>
+        <h2 style="font-size:clamp(26px,3.2vw,38px);max-width:22ch;">Install registers itself. There is no config file.</h2>
+        <p class="lede" style="max-width:42ch;">One command installs the CLI, registers an MCP server, and drops a skill into every agent it finds on your machine. Say <em>&ldquo;look at this&rdquo;</em> and the agent knows where to look.</p>
+        <ul class="agents">
+          <li data-peek>Claude Code</li>
+          <li data-peek>Codex</li>
+          <li data-peek>Cursor</li>
+          <li data-peek>Grok Build</li>
+        </ul>
+      </div>
+      <div>
+        <table class="cmds">
+          <thead><tr><th>Command</th><th>Does</th></tr></thead>
+          <tbody>
+            <tr><td>peek install</td><td>Native host, daemon, MCP, skills</td></tr>
+            <tr><td>peek doctor</td><td>Is the daemon, host, and last pin healthy</td></tr>
+            <tr><td>peek latest --md</td><td>Print the current pin as markdown</td></tr>
+            <tr><td>peek wait</td><td>Arm the overlay and block until the next click</td></tr>
+            <tr><td>peek mcp</td><td>stdio MCP server</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="local">
+  <div class="wrap">
+    <div class="eyebrow">Local by default</div>
+    <h2 style="font-size:clamp(30px,4.4vw,50px);margin-top:18px;max-width:24ch;">Your DOM never leaves your machine.</h2>
+    <div class="facts">
+      <div class="fact">
+        <b>Localhost only</b>
+        <p>The extension talks to a helper on <code>127.0.0.1</code>. There is no server, no account, and no sign-in.</p>
+      </div>
+      <div class="fact">
+        <b>Owner-only files</b>
+        <p>Pins are written to <code>~/.peek</code> with mode <code>0600</code>. Delete the directory and they are gone.</p>
+      </div>
+      <div class="fact">
+        <b>No telemetry</b>
+        <p>Nothing is measured, phoned home, or bundled. The daemon only answers the extension you installed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band close-band">
+  <div class="wrap">
+    <div class="eyebrow">Get it</div>
+    <h2 style="margin-top:18px;max-width:20ch;">You pick. The model looks.</h2>
+    <div class="install" style="margin-top:28px;">
+      <div class="cmd">
+        <code id="install-cmd-2">curl -fsSL https://raw.githubusercontent.com/iammayron/peek/main/install.sh | <b>sh</b></code>
+        <button type="button" data-copy="#install-cmd-2">Copy</button>
+      </div>
+      <p class="fine">Then load the unpacked extension from the path <code>peek install</code> prints. The Chrome Web Store listing is in review.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>Peek &mdash; pin a live DOM node for coding agents. MIT licensed.</span>
+  <span><a href="https://github.com/iammayron/peek">github.com/iammayron/peek</a></span>
+</footer>
+
+<div id="peek-box"></div>
+<div id="peek-chip"></div>
+
+<aside id="tray" aria-label="Pinned elements demo">
+  <div class="t-title">Pinned</div>
+  <div class="pills"><span class="empty">None yet</span></div>
+  <div class="t-actions">
+    <button type="button" class="done" disabled>Done</button>
+    <button type="button" class="cancel">Cancel</button>
+  </div>
+</aside>
+<div id="toast" role="status"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const box = document.getElementById("peek-box");
+  const chip = document.getElementById("peek-chip");
+  const tray = document.getElementById("tray");
+  const pills = tray.querySelector(".pills");
+  const doneBtn = tray.querySelector(".done");
+  const cancelBtn = tray.querySelector(".cancel");
+  const toast = document.getElementById("toast");
+  const out = {
+    tag: document.getElementById("r-tag"),
+    sel: document.getElementById("r-sel"),
+    box: document.getElementById("r-box"),
+    font: document.getElementById("r-font"),
+    color: document.getElementById("r-color"),
+  };
+
+  let pins = [];
+  let hovered = null;
+
+  // Shortest selector that still resolves to exactly this node, same idea the
+  // extension uses: id, then tag plus classes, then an nth-of-type path.
+  function selectorFor(el) {
+    if (el.id) return "#" + el.id;
+    const classes = [...el.classList].filter((c) => !c.startsWith("stagger"));
+    if (classes.length) {
+      const guess = el.tagName.toLowerCase() + "." + classes.join(".");
+      if (document.querySelectorAll(guess).length === 1) return guess;
+    }
+    const parts = [];
+    let node = el;
+    while (node && node.nodeType === 1 && node !== document.body) {
+      const tag = node.tagName.toLowerCase();
+      const siblings = [...node.parentNode.children].filter((n) => n.tagName === node.tagName);
+      parts.unshift(siblings.length > 1 ? tag + ":nth-of-type(" + (siblings.indexOf(node) + 1) + ")" : tag);
+      node = node.parentElement;
+    }
+    return parts.join(" > ");
+  }
+
+  function label(el) {
+    const sel = selectorFor(el);
+    if (sel.length <= 26) return sel;
+    const tail = sel.split(" > ").slice(-2).join(" > ");
+    return "… " + tail;
+  }
+
+  function paint(el) {
+    const r = el.getBoundingClientRect();
+    box.style.transform = "translate(" + r.left + "px," + r.top + "px)";
+    box.style.width = r.width + "px";
+    box.style.height = r.height + "px";
+    box.style.opacity = "1";
+
+    const sel = selectorFor(el);
+    chip.textContent = sel;
+    chip.style.opacity = "1";
+    const chipTop = r.top < 26 ? r.bottom + 6 : r.top - 22;
+    chip.style.transform = "translate(" + Math.max(8, r.left) + "px," + chipTop + "px)";
+
+    const cs = getComputedStyle(el);
+    out.tag.textContent = el.tagName.toLowerCase();
+    out.sel.textContent = sel;
+    out.sel.title = sel;
+    out.box.textContent = Math.round(r.width) + " × " + Math.round(r.height);
+    out.font.textContent = Math.round(parseFloat(cs.fontSize)) + "px / " + cs.fontWeight;
+    out.color.textContent = cs.color;
+  }
+
+  function clear() {
+    box.style.opacity = "0";
+    chip.style.opacity = "0";
+    hovered = null;
+  }
+
+  document.addEventListener("pointerover", (e) => {
+    const el = e.target.closest("[data-peek]");
+    if (!el) { clear(); return; }
+    hovered = el;
+    paint(el);
+  });
+
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-peek]");
+    if (!el) return;
+    if (el.closest("a")) return;
+    e.preventDefault();
+    if (pins.some((p) => p.el === el)) return;
+    pins.push({ el: el, sel: selectorFor(el), label: label(el) });
+    render();
+  });
+
+  window.addEventListener("scroll", () => { if (hovered) paint(hovered); }, { passive: true });
+  window.addEventListener("resize", () => { if (hovered) paint(hovered); });
+
+  function render() {
+    pills.innerHTML = "";
+    if (!pins.length) {
+      const empty = document.createElement("span");
+      empty.className = "empty";
+      empty.textContent = "None yet";
+      pills.appendChild(empty);
+    } else {
+      pins.forEach((p, i) => {
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        const text = document.createElement("span");
+        text.textContent = p.label;
+        const x = document.createElement("button");
+        x.type = "button";
+        x.textContent = "×";
+        x.setAttribute("aria-label", "Unpin " + p.label);
+        x.addEventListener("click", () => { pins.splice(i, 1); render(); });
+        pill.append(text, x);
+        pills.appendChild(pill);
+      });
+    }
+    doneBtn.disabled = pins.length === 0;
+  }
+
+  function say(msg) {
+    toast.textContent = msg;
+    toast.classList.add("on");
+    clearTimeout(say.t);
+    say.t = setTimeout(() => toast.classList.remove("on"), 2600);
+  }
+
+  doneBtn.addEventListener("click", async () => {
+    const n = pins.length;
+    const noun = n === 1 ? "element" : "elements";
+    const body = "look at this\n\nI pinned " + n + " " + noun + " in the browser.\n\n"
+      + pins.map((p, i) => (i + 1) + ". " + p.sel).join("\n");
+    try { await navigator.clipboard.writeText(body); } catch (err) { /* toast still explains */ }
+    say("Copied " + n + " " + noun + ". That is the real thing Peek does.");
+    pins = [];
+    render();
+  });
+
+  cancelBtn.addEventListener("click", () => { pins = []; render(); clear(); });
+
+  const demo = document.getElementById("demo");
+  if (demo && matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    demo.removeAttribute("autoplay");
+    demo.loop = false;
+    demo.controls = true;
+    demo.pause();
+  }
+
+  document.querySelectorAll("[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const el = document.querySelector(btn.dataset.copy);
+      try {
+        await navigator.clipboard.writeText(el.textContent.trim());
+        btn.textContent = "Copied";
+        setTimeout(() => { btn.textContent = "Copy"; }, 1600);
+      } catch (err) {
+        say("Copy blocked by the browser. Select the command instead.");
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
