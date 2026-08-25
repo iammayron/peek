@@ -4,9 +4,27 @@
 
 # Peek
 
-Point at a DOM node in your real browser. Grok Build, Claude Code, Codex, and Cursor get the selector, a slice of HTML, and a cropped screenshot.
+Point at a DOM node in your real browser. Grok Build, Claude Code, Codex, and Cursor get the selector, the DOM, the computed CSS, the box metrics, and a cropped screenshot.
 
 This is not a browser-driving agent. You pick. The model looks.
+
+## What a pin carries
+
+More than a screenshot. Every pin hands the agent:
+
+| | |
+|---|---|
+| Where | Page URL and tab title |
+| Selector | Best CSS selector, the strategy that produced it, and the XPath |
+| Identity | Tag, `id`, first 8 classes, ARIA role, accessible name |
+| Content | `innerText` (2,000 chars) and `outerHTML` (12,000 chars) |
+| Layout | Bounding rect, viewport size, `devicePixelRatio`, and whether the element was clipped |
+| CSS | 22 computed styles: box model, typography, color, flex/grid, overflow, `z-index`, opacity |
+| Picture | PNG cropped from the visible tab around the element, with 32px of padding |
+| Context | Whether the node sits in a shadow root, and the tab it came from |
+
+Pin several elements before hitting **Done** and the agent gets all of them in one
+session. Everything lands in `~/.peek/` at mode `0600`.
 
 ## Install
 
