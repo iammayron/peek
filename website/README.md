@@ -4,6 +4,8 @@ Public landing for [Peek](https://github.com/iammayron/peek). Canonical origin: 
 
 This app lives in `website/` so the Go daemon, Chrome extension, and install scripts stay untouched. All Next.js and Remotion dependencies are in `website/package.json`.
 
+The production build is a **static export** (`output: 'export'`). Cloudflare Pages serves `out/`; there is no Node server at request time. The OG image and Remotion MP4 are committed under `public/`.
+
 ## Local
 
 ```bash
@@ -14,31 +16,23 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+Static export (what Pages deploys):
+
 ```bash
 npm run build
-npm start
+npm run preview
 ```
 
 ## Remotion demo
 
 The hero video is a stylized 16s composition (generic browser, pin, terminal paste). Source is in `remotion/`. It is not a recording of Peek.
 
-Studio:
+The landing reads `public/demo.mp4` and `public/demo-poster.png`. Those are already in git, so a Pages build does **not** need Chrome or Remotion. Re-render locally only if you change the composition:
 
 ```bash
 cd website
 npm run remotion
-```
-
-Render the MP4 used by the landing (from `website/`):
-
-```bash
 npx remotion render remotion/index.ts PeekDemo public/demo.mp4
-```
-
-Poster still (frame 150, hover+chip):
-
-```bash
 npx remotion still remotion/index.ts PeekDemo public/demo-poster.png --frame=150
 ```
 
@@ -51,6 +45,25 @@ npx remotion render remotion/index.ts PeekDemo public/demo.mp4 \
 
 `npm run render` and `npm run still` wrap those commands.
 
-## Vercel
+OG artwork source is `scripts/og.html` (committed PNG: `public/og-image.png`).
 
-Create a project on this repo and set **Root Directory** to `website`. Vercel will pick up `website/vercel.json` (`framework: nextjs`) and `website/package.json`. Production URL should be `https://peek.mayronalves.com`. Do not set the repo root as the Next app; that would fight the Go tree.
+## Cloudflare Pages
+
+Create a Pages project on this GitHub repo (not a Vercel app). Settings:
+
+| Setting | Value |
+|---|---|
+| Project root / Root directory | `website` |
+| Build command | `npm run build` |
+| Output directory | `out` |
+| Custom domain | `peek.mayronalves.com` |
+
+Attach **peek.mayronalves.com** in the Pages project’s Custom domains UI. Do not treat this README as DNS instructions.
+
+Optional deploy from `website/` after a local `npm run build`:
+
+```bash
+npx wrangler pages deploy out
+```
+
+Pass `--project-name` if Wrangler should target an existing Pages project instead of creating one.

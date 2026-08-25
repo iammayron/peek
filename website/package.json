@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "preview": "python3 -m http.server 4173 --directory out --bind 127.0.0.1",
     "lint": "eslint",
     "remotion": "remotion studio remotion/index.ts",
     "render": "remotion render remotion/index.ts PeekDemo public/demo.mp4",

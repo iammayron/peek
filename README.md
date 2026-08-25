@@ -34,7 +34,7 @@ unpacked extension dir to load from `chrome://extensions` with Developer mode on
 
 ## Website
 
-The public landing lives in [`website/`](website/) and is meant to deploy from that directory to [peek.mayronalves.com](https://peek.mayronalves.com). Next.js and Remotion stay isolated there; the Go Makefile is unchanged.
+The public landing lives in [`website/`](website/) and deploys as a static export to [peek.mayronalves.com](https://peek.mayronalves.com) on Cloudflare Pages (root directory `website`). Next.js and Remotion stay isolated there; the Go Makefile is unchanged.
 
 ## Commands
 
