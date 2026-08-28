@@ -12,6 +12,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -23,7 +25,10 @@ import (
 	"github.com/iammayron/peek/internal/rpc"
 )
 
-const historyKeep = 10
+const (
+	historyKeep   = 10
+	historyMaxAge = 7 * 24 * time.Hour
+)
 
 type bridge struct {
 	conn net.Conn
@@ -34,6 +39,7 @@ type Daemon struct {
 	mu          sync.Mutex
 	latest      *payload.Pin
 	session     payload.Session
+	lastReady   payload.Session
 	waiters     []chan payload.Pin
 	doneWaiters []chan []payload.Pin
 	bridges     map[net.Conn]*bridge
@@ -70,7 +76,9 @@ func Serve(ctx context.Context) error {
 
 	d := New()
 	d.loadLatest()
+	d.expireStale()
 	go d.startHTTP(ctx)
+	go d.pruneLoop(ctx)
 
 	go func() {
 		<-ctx.Done()
@@ -156,6 +164,9 @@ func (d *Daemon) loadLatest() {
 	}
 	if s, err := payload.ReadSession(paths.SessionJSON()); err == nil {
 		d.session = s
+		if s.Ready && len(s.Pins) > 0 {
+			d.lastReady = cloneSession(s)
+		}
 	}
 }
 
@@ -203,6 +214,12 @@ func (d *Daemon) dispatch(conn net.Conn, wmu *sync.Mutex, req *rpc.Request) *rpc
 		return d.sessionResponse(req.ID)
 	case "unpin":
 		return d.unpinRequest(req)
+	case "begin":
+		d.beginPicking()
+		return &rpc.Response{ID: req.ID, OK: true}
+	case "abandon":
+		d.abandonPicking()
+		return &rpc.Response{ID: req.ID, OK: true}
 	case "done":
 		return d.doneRequest(req)
 	case "list":
@@ -306,6 +323,7 @@ func (d *Daemon) savePin(p rpc.PinParams) (*payload.Pin, error) {
 
 	d.mu.Lock()
 	if d.session.Ready || d.session.ID == "" {
+		d.stashReadyLocked()
 		d.session = payload.NewSession()
 	}
 	d.session.Pins = append(d.session.Pins, pin)
@@ -342,12 +360,75 @@ func (d *Daemon) latestResponse(id string) *rpc.Response {
 func (d *Daemon) sessionResponse(id string) *rpc.Response {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if len(d.session.Pins) == 0 {
+	sess := d.deliveredSessionLocked()
+	if len(sess.Pins) == 0 {
 		return &rpc.Response{ID: id, OK: false, Error: "no element pinned yet"}
 	}
-	pins := append([]payload.Pin(nil), d.session.Pins...)
+	pins := append([]payload.Pin(nil), sess.Pins...)
 	last := pins[len(pins)-1]
 	return &rpc.Response{ID: id, OK: true, Pin: &last, Pins: pins}
+}
+
+func (d *Daemon) deliveredSessionLocked() payload.Session {
+	if d.session.Ready && len(d.session.Pins) > 0 {
+		return d.session
+	}
+	if d.lastReady.Ready && len(d.lastReady.Pins) > 0 {
+		return d.lastReady
+	}
+	return payload.Session{}
+}
+
+func (d *Daemon) stashReadyLocked() {
+	if !d.session.Ready || len(d.session.Pins) == 0 {
+		return
+	}
+	d.lastReady = cloneSession(d.session)
+}
+
+func (d *Daemon) persistDelivered(sess payload.Session, last payload.Session) {
+	if sess.Ready && len(sess.Pins) > 0 {
+		_ = sess.Write(paths.SessionJSON())
+		return
+	}
+	if last.Ready && len(last.Pins) > 0 {
+		_ = last.Write(paths.SessionJSON())
+		return
+	}
+	_ = sess.Write(paths.SessionJSON())
+}
+
+func (d *Daemon) beginPicking() {
+	d.mu.Lock()
+	d.stashReadyLocked()
+	d.session = payload.NewSession()
+	sess := d.session
+	last := d.lastReady
+	d.mu.Unlock()
+	d.persistDelivered(sess, last)
+}
+
+func (d *Daemon) abandonPicking() {
+	d.mu.Lock()
+	if d.session.Ready {
+		d.mu.Unlock()
+		return
+	}
+	d.session = payload.NewSession()
+	sess := d.session
+	last := d.lastReady
+	d.mu.Unlock()
+	d.persistDelivered(sess, last)
+}
+
+func cloneSession(s payload.Session) payload.Session {
+	out := s
+	out.Pins = append([]payload.Pin(nil), s.Pins...)
+	if s.ReadyAt != nil {
+		t := *s.ReadyAt
+		out.ReadyAt = &t
+	}
+	return out
 }
 
 func (d *Daemon) unpinRequest(req *rpc.Request) *rpc.Response {
@@ -388,6 +469,7 @@ func (d *Daemon) doneRequest(req *rpc.Request) *rpc.Response {
 	d.session.Ready = true
 	d.session.ReadyAt = &now
 	d.session.Injected = false
+	d.stashReadyLocked()
 	pins := append([]payload.Pin(nil), d.session.Pins...)
 	sess := d.session
 	doneWaiters := d.doneWaiters
@@ -545,6 +627,56 @@ func newID() string {
 	return fmt.Sprintf("%x", b[:])
 }
 
+func (d *Daemon) pruneLoop(ctx context.Context) {
+	t := time.NewTicker(time.Hour)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			d.expireStale()
+		}
+	}
+}
+
+func (d *Daemon) expireStale() {
+	pruneHistory()
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if sessionOlderThan(d.session, historyMaxAge) {
+		d.session = payload.NewSession()
+		d.lastReady = payload.Session{}
+		_ = d.session.Write(paths.SessionJSON())
+	} else if sessionOlderThan(d.lastReady, historyMaxAge) {
+		d.lastReady = payload.Session{}
+	}
+	if d.latest != nil && time.Since(d.latest.TS) > historyMaxAge {
+		d.latest = nil
+		_ = os.Remove(paths.LatestJSON())
+		_ = os.Remove(paths.LatestPNG())
+	}
+}
+
+func sessionOlderThan(s payload.Session, maxAge time.Duration) bool {
+	if s.ReadyAt != nil {
+		return time.Since(*s.ReadyAt) > maxAge
+	}
+	if len(s.Pins) == 0 {
+		return false
+	}
+	oldest := s.Pins[0].TS
+	for _, p := range s.Pins[1:] {
+		if p.TS.Before(oldest) {
+			oldest = p.TS
+		}
+	}
+	if oldest.IsZero() {
+		return false
+	}
+	return time.Since(oldest) > maxAge
+}
+
 func pruneHistory() {
 	entries, err := os.ReadDir(paths.HistoryDir())
 	if err != nil {
@@ -554,32 +686,32 @@ func pruneHistory() {
 		name string
 		mod  time.Time
 	}
+	now := time.Now()
 	var jsons []item
 	for _, e := range entries {
-		if filepath.Ext(e.Name()) != ".json" {
-			continue
-		}
 		info, err := e.Info()
 		if err != nil {
 			continue
 		}
-		jsons = append(jsons, item{name: e.Name(), mod: info.ModTime()})
+		path := filepath.Join(paths.HistoryDir(), e.Name())
+		if now.Sub(info.ModTime()) > historyMaxAge {
+			_ = os.Remove(path)
+			if filepath.Ext(e.Name()) == ".json" {
+				_ = os.Remove(strings.TrimSuffix(path, ".json") + ".png")
+			}
+			continue
+		}
+		if filepath.Ext(e.Name()) == ".json" {
+			jsons = append(jsons, item{name: e.Name(), mod: info.ModTime()})
+		}
 	}
 	if len(jsons) <= historyKeep {
 		return
 	}
-	// sort oldest first
-	for i := 0; i < len(jsons); i++ {
-		for j := i + 1; j < len(jsons); j++ {
-			if jsons[j].mod.Before(jsons[i].mod) {
-				jsons[i], jsons[j] = jsons[j], jsons[i]
-			}
-		}
-	}
-	drop := jsons[:len(jsons)-historyKeep]
-	for _, it := range drop {
+	sort.Slice(jsons, func(i, j int) bool { return jsons[i].mod.Before(jsons[j].mod) })
+	for _, it := range jsons[:len(jsons)-historyKeep] {
 		base := filepath.Join(paths.HistoryDir(), it.name)
 		_ = os.Remove(base)
-		_ = os.Remove(base[:len(base)-5] + ".png")
+		_ = os.Remove(strings.TrimSuffix(base, ".json") + ".png")
 	}
 }

@@ -112,6 +112,7 @@ The listing declares that the extension does not collect or use user data. Suppo
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.2.5 | 2026-08-28 | Docked full-height pin rail that pushes the page, slide in/out, phosphor panel, screenshot thumbs with hover preview. | Pending review |
 | 0.2.4 | 2026-08-25 | Enter finishes a pin session. Peek's own tray and HUD are excluded from hit-testing so they cannot be selected. | Pending review |
 | 0.2.3 | 2026-08-25 | Skill documents the full pin payload. No extension code change. | Git tag |
 | 0.2.2 | 2026-08-25 | Install help points store users at the listing instead of load-unpacked. No extension code change. | Git tag |

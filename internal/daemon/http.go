@@ -22,6 +22,8 @@ func (d *Daemon) startHTTP(ctx context.Context) {
 	mux.HandleFunc("/hello", d.handleHTTPHello)
 	mux.HandleFunc("/pin", d.handleHTTPPin)
 	mux.HandleFunc("/session", d.handleHTTPSession)
+	mux.HandleFunc("/session/begin", d.handleHTTPBegin)
+	mux.HandleFunc("/session/abandon", d.handleHTTPAbandon)
 	mux.HandleFunc("/done", d.handleHTTPDone)
 	mux.HandleFunc("/arm", d.handleHTTPArm)
 
@@ -94,6 +96,24 @@ func (d *Daemon) handleHTTPSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]any{"ok": true, "pins": resp.Pins})
+}
+
+func (d *Daemon) handleHTTPBegin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	d.beginPicking()
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func (d *Daemon) handleHTTPAbandon(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	d.abandonPicking()
+	writeJSON(w, map[string]any{"ok": true})
 }
 
 func (d *Daemon) handleHTTPDone(w http.ResponseWriter, r *http.Request) {

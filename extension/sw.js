@@ -30,13 +30,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       try {
         const tab = sender.tab;
         if (!tab?.id) throw new Error("no tab");
-        const pngBase64 = await captureCrop(tab, message.payload);
-        const pin = await sendPin(message.payload, pngBase64, tab);
+        const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+        revealOverlay(tab.id);
+        const canvas = await cropToCanvas(dataUrl, message.payload);
+        const preview = await previewFromCanvas(canvas);
+        notifyPreview(tab.id, message.clientId, preview);
+        const b64 = await encodeFull(canvas);
+        const pin = await sendPin(message.payload, b64, tab);
         await flashBadge(true);
-        sendResponse({ ok: true, id: pin?.id || "" });
+        sendResponse({ ok: true, id: pin?.id || "", preview: preview || "" });
       } catch (err) {
         console.error("peek pin", err);
+        if (sender.tab?.id) revealOverlay(sender.tab.id);
         await flashBadge(false);
+        sendResponse({ ok: false, error: err?.message || String(err) });
+      }
+    })();
+    return true;
+  }
+  if (message?.type === "peek:begin") {
+    (async () => {
+      try {
+        await fetch(`${BRIDGE}/session/begin`, {
+          method: "POST",
+          headers: { "X-Peek": "1" },
+        });
+        sendResponse({ ok: true });
+      } catch (err) {
         sendResponse({ ok: false, error: err?.message || String(err) });
       }
     })();
@@ -44,6 +64,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message?.type === "peek:disarmed") {
     chrome.action.setBadgeText({ text: "" });
+    if (message.abandon !== false) {
+      fetch(`${BRIDGE}/session/abandon`, {
+        method: "POST",
+        headers: { "X-Peek": "1" },
+      }).catch(() => {});
+    }
   }
   if (message?.type === "peek:unpin") {
     (async () => {
@@ -153,6 +179,7 @@ async function armActiveTab() {
 async function armTab(tab) {
   if (!tab?.id) return;
   if (await isRestricted(tab)) return;
+  await disarmOtherTabs(tab.id);
   const status = await pingContent(tab.id);
   if (status?.ok) {
     await chrome.tabs.sendMessage(tab.id, { type: "peek:arm" });
@@ -162,6 +189,27 @@ async function armTab(tab) {
     target: { tabId: tab.id },
     files: ["content/selector.js", "content/picker.js"],
   });
+}
+
+async function disarmOtherTabs(exceptTabId) {
+  let tabs;
+  try {
+    tabs = await chrome.tabs.query({});
+  } catch {
+    return;
+  }
+  await Promise.all(
+    tabs.map(async (t) => {
+      if (!t.id || t.id === exceptTabId) return;
+      const status = await pingContent(t.id);
+      if (!status?.armed) return;
+      try {
+        await chrome.tabs.sendMessage(t.id, { type: "peek:disarm", abandon: false });
+      } catch {
+        /* tab has no picker */
+      }
+    }),
+  );
 }
 
 async function pingContent(tabId) {
@@ -189,8 +237,16 @@ async function isRestricted(tab) {
   );
 }
 
-async function captureCrop(tab, payload) {
-  const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" });
+function revealOverlay(tabId) {
+  chrome.tabs.sendMessage(tabId, { type: "peek:captured" }).catch(() => {});
+}
+
+function notifyPreview(tabId, clientId, preview) {
+  if (!preview) return;
+  chrome.tabs.sendMessage(tabId, { type: "peek:preview", clientId, preview }).catch(() => {});
+}
+
+async function cropToCanvas(dataUrl, payload) {
   const rect = payload.rect || {};
   const blob = await (await fetch(dataUrl)).blob();
   const bitmap = await createImageBitmap(blob);
@@ -228,22 +284,60 @@ async function captureCrop(tab, payload) {
   const canvas = new OffscreenCanvas(Math.round(dw), Math.round(dh));
   const ctx = canvas.getContext("2d");
   ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+async function previewFromCanvas(canvas) {
+  let previewCanvas = canvas;
+  const long = Math.max(canvas.width, canvas.height);
+  if (long > 560) {
+    const s = 560 / long;
+    previewCanvas = new OffscreenCanvas(
+      Math.max(1, Math.round(canvas.width * s)),
+      Math.max(1, Math.round(canvas.height * s)),
+    );
+    previewCanvas.getContext("2d").drawImage(canvas, 0, 0, previewCanvas.width, previewCanvas.height);
+  }
+  const previewBlob = await previewCanvas.convertToBlob({ type: "image/jpeg", quality: 0.72 });
+  return blobToDataUrl(previewBlob);
+}
+
+async function encodeFull(canvas) {
   let out = await canvas.convertToBlob({ type: "image/png" });
   if (out.size > 700_000) {
     out = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.82 });
   }
-  const buf = await out.arrayBuffer();
-  return arrayBufferToBase64(buf);
+  return blobToBase64(out);
 }
 
-function arrayBufferToBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
-  const chunk = 0x8000;
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (reader.error) {
+        reject(reader.error);
+        return;
+      }
+      resolve(String(reader.result || ""));
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (reader.error) {
+        reject(reader.error);
+        return;
+      }
+      const s = String(reader.result || "");
+      const i = s.indexOf(",");
+      resolve(i >= 0 ? s.slice(i + 1) : "");
+    };
+    reader.readAsDataURL(blob);
+  });
 }
 
 async function flashBadge(ok) {
