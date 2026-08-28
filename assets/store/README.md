@@ -34,7 +34,7 @@ The store demands JPEG or 24-bit PNG with no alpha, hence `-alpha off PNG24:`.
 
 ## Screenshots
 
-The three 1280x800 shots are the real picker running over `testdata/pages/fixture.html`.
+The three 1280x800 shots are the docked rail running over `testdata/pages/fixture.html`.
 Serve the repo root (`python3 -m http.server 8899`), open the fixture at a 1280x800
 viewport, then inject the actual content scripts with a stub for the one API they
 need from the service worker:
@@ -49,5 +49,5 @@ globalThis.chrome = { runtime: {
 // call globalThis.__peek.arm(), hover and click elements, and capture.
 ```
 
-Hover an element for the highlight and chip, click to add tray pills, press Done for
-the copied toast. Flatten each capture the same way as the tiles.
+Hover an element for the highlight ticks, click to add rail pills with thumbs, press
+Done for the copied toast. Flatten each capture the same way as the tiles.

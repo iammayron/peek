@@ -3,7 +3,7 @@ name: peek
 description: >
   Read the DOM element(s) the user pinned in their browser with Peek.
   Use when the user says "this", "these", "this element", "the selected/inspected/pinned
-  elements", "look at this", "I selected", or runs /peek — before guessing
+  elements", "take a peek", "look at this", "I selected", or runs /peek — before guessing
   at CSS or which component to edit.
 ---
 
@@ -15,7 +15,7 @@ Do not guess which node they mean. Fetch the session.
 
 ## When they already pinned
 
-They often paste `look at this` (Done copies that) or just say "look at this".
+They often paste `Take a peek at 3 elements. I want to …` (Done copies that) or just say "take a peek".
 
 Call MCP `get_picked_element`. That returns the whole session. If several pins, handle all of them.
 

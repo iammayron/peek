@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en" data-palette="lime" data-peek="closed">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Peek — docked panel prototype</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" />
+  <style>
+    @property --rail-track {
+      syntax: "<length>";
+      inherits: true;
+      initial-value: 0px;
+    }
+
+    :root {
+      interpolate-size: allow-keywords;
+      --paper: #f4f1ea;
+      --page-ink: #14120e;
+      --page-mark: #c8ff4d;
+      --rule: #d9d3c4;
+      --gap: 18px;
+      --panel: 350px;
+      --rail-open: calc(var(--panel) + 2 * var(--gap));
+      --rail-track: var(--rail-open);
+      --peek-ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --peek-time: 480ms;
+      --ink: #14120e;
+      --mark: #c8ff4d;
+      --type: #e7e3d6;
+      --mute: #8a867c;
+      --wash: color-mix(in oklab, var(--mark) 12%, transparent);
+    }
+
+    html[data-palette="lime"] {
+      --ink: #14120e;
+      --mark: #c8ff4d;
+      --type: #e7e3d6;
+      --mute: #8a867c;
+    }
+    html[data-palette="phosphor"] {
+      --ink: #242526;
+      --mark: #6dff4d;
+      --type: #e4e6e4;
+      --mute: #8a8c8b;
+    }
+    html[data-palette="amber"] {
+      --ink: #16110a;
+      --mark: #ffb020;
+      --type: #f3e6c8;
+      --mute: #9a8460;
+    }
+    html[data-palette="ice"] {
+      --ink: #0c1114;
+      --mark: #7ee7ff;
+      --type: #d7eef4;
+      --mute: #6d838c;
+    }
+    html[data-palette="paper"] {
+      --ink: #f4f1ea;
+      --mark: #14120e;
+      --type: #14120e;
+      --mute: #6e6a60;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      transition: --rail-track var(--peek-time) var(--peek-ease);
+    }
+
+    html[data-peek="closed"] {
+      --rail-track: 0px;
+    }
+
+    html, body {
+      margin: 0;
+      min-block-size: 100dvb;
+    }
+
+    body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) var(--rail-track);
+      background: var(--paper);
+      color: var(--page-ink);
+      font: 16px/1.45 "IBM Plex Sans", "Helvetica Neue", sans-serif;
+    }
+
+    /* Fake page — this is what Peek would push left on a real tab */
+    .page {
+      min-inline-size: 0;
+      overflow: auto;
+      scrollbar-gutter: stable;
+    }
+
+    .page header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 28px;
+      border-bottom: 1px solid var(--page-ink);
+    }
+
+    .page header nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .peek-toggle {
+      inline-size: auto !important;
+      font: 11px/1 "IBM Plex Mono", ui-monospace, monospace !important;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: var(--page-ink) !important;
+      color: var(--page-mark) !important;
+      border: 0 !important;
+      padding: 8px 12px !important;
+      cursor: pointer;
+    }
+
+    .peek-toggle[aria-expanded="true"] {
+      outline: 1px solid var(--page-ink);
+      outline-offset: 2px;
+    }
+
+    .page header strong {
+      font-family: "IBM Plex Mono", ui-monospace, monospace;
+      letter-spacing: 0.08em;
+    }
+
+    .page main {
+      display: grid;
+      grid-template-columns: 1fr minmax(200px, 280px);
+      gap: 28px;
+      padding: 28px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--page-ink);
+      padding: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 12px 0 4px;
+    }
+
+    .page input, .page button {
+      font: inherit;
+      border: 1px solid var(--page-ink);
+      background: var(--paper);
+      padding: 8px 10px;
+      inline-size: 100%;
+    }
+
+    .page button.primary {
+      background: var(--page-ink);
+      color: var(--page-mark);
+      margin-block-start: 16px;
+      cursor: pointer;
+    }
+
+    .overflow {
+      inline-size: 220px;
+      overflow: hidden;
+      white-space: nowrap;
+      border: 1px dashed var(--page-ink);
+      padding: 8px;
+    }
+
+    /* Peek rail — occupies a grid track so the page reflows, not overlays */
+    .rail {
+      display: grid;
+      justify-items: end;
+      min-inline-size: 0;
+      overflow: clip;
+      padding: var(--gap);
+      background: transparent;
+      transition: padding var(--peek-time) var(--peek-ease);
+    }
+
+    html[data-peek="closed"] .rail {
+      padding-inline: 0;
+    }
+
+    html[data-peek="open"].is-settled .rail {
+      overflow: visible;
+    }
+
+    .panel {
+      display: grid;
+      inline-size: var(--panel);
+      min-inline-size: var(--panel);
+      block-size: 100%;
+      min-block-size: 0;
+      border: 0;
+      border-radius: 28px;
+      color: var(--type);
+      font: 11px/1.35 "IBM Plex Mono", ui-monospace, monospace;
+      filter:
+        drop-shadow(-8px 0 18px rgb(20 18 14 / 0.18))
+        drop-shadow(0 10px 28px rgb(20 18 14 / 0.22));
+    }
+
+    @supports (corner-shape: squircle) {
+      .panel {
+        corner-shape: squircle;
+      }
+    }
+
+    .panel-face {
+      display: flex;
+      flex-direction: column;
+      min-block-size: 0;
+      background: var(--ink);
+      border-radius: inherit;
+      overflow: clip;
+    }
+
+    @supports (corner-shape: squircle) {
+      .panel-face {
+        corner-shape: squircle;
+      }
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      padding: 14px 14px 10px;
+      color: var(--mark);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .panel-head .count {
+      color: var(--mute);
+      letter-spacing: 0.04em;
+    }
+
+    .pills {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      align-content: flex-start;
+      gap: 6px;
+      padding: 0 14px 12px;
+      overflow: auto;
+      overscroll-behavior: contain;
+      min-block-size: 0;
+    }
+
+    .empty {
+      color: var(--mute);
+    }
+
+    .pill {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      max-inline-size: 100%;
+      border: 1px solid var(--mark);
+      color: var(--mark);
+      background: transparent;
+      padding: 4px;
+    }
+
+    .pill:hover { background: var(--wash); }
+
+    .pill-shot {
+      inline-size: 40px;
+      block-size: 40px;
+      padding: 0;
+      border: 0;
+      background: color-mix(in oklab, var(--mark) 14%, var(--ink));
+      overflow: clip;
+      cursor: default;
+    }
+
+    .pill-shot img {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .pill-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-inline-size: 0;
+    }
+
+    .pill-x {
+      border: 0;
+      background: transparent;
+      color: var(--mark);
+      cursor: pointer;
+      font: inherit;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    .panel-actions {
+      display: grid;
+      gap: 8px;
+      padding: 12px 14px 14px;
+      margin-block-start: auto;
+    }
+
+    .done, .cancel {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font: inherit;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 9px 12px;
+      cursor: pointer;
+    }
+
+    .done {
+      border: 0;
+      background: var(--mark);
+      color: var(--ink);
+    }
+
+    .done:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .cancel {
+      border: 1px solid var(--mark);
+      background: transparent;
+      color: var(--mark);
+    }
+
+    .done kbd, .cancel kbd {
+      font: inherit;
+      font-size: 9px;
+      letter-spacing: 0.04em;
+      line-height: 1.35;
+      padding: 0 5px;
+      border: 1px solid currentColor;
+    }
+
+    .proto {
+      padding: 10px 14px 14px;
+      border-top: 1px solid color-mix(in oklab, var(--mark) 22%, var(--ink));
+      color: var(--mute);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .proto label {
+      display: grid;
+      grid-template-columns: 52px 1fr 36px;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0 0;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 10px;
+      color: var(--mute);
+    }
+
+    .proto input[type="range"] { inline-size: 100%; accent-color: var(--mark); }
+
+    .swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-block-start: 10px;
+    }
+
+    .swatch {
+      display: grid;
+      justify-items: center;
+      gap: 4px;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: var(--mute);
+      font: inherit;
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .swatch i {
+      display: block;
+      inline-size: 22px;
+      block-size: 22px;
+      border: 1px solid var(--well);
+      background: var(--chip);
+    }
+
+    .swatch[aria-pressed="true"] {
+      color: var(--mark);
+    }
+
+    .swatch[aria-pressed="true"] i {
+      outline: 1px solid var(--mark);
+      outline-offset: 2px;
+    }
+
+    /* Highlight on the page, same language as the live picker */
+    .box {
+      position: fixed;
+      pointer-events: none;
+      border: 1px solid var(--mark);
+      background: var(--wash);
+      box-shadow: 0 0 0 1px #111, inset 0 0 0 1px rgba(17, 17, 17, 0.6);
+      z-index: 2;
+    }
+
+    .tick {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      pointer-events: none;
+    }
+    .tick::before, .tick::after {
+      content: "";
+      position: absolute;
+      background: var(--mark);
+    }
+    .tick.tl { top: -1px; left: -1px; }
+    .tick.tr { top: -1px; right: -1px; }
+    .tick.bl { bottom: -1px; left: -1px; }
+    .tick.br { bottom: -1px; right: -1px; }
+    .tick.tl::before, .tick.bl::before, .tick.tr::before, .tick.br::before {
+      width: 8px; height: 1px; left: 0; top: 0;
+    }
+    .tick.tl::after, .tick.tr::after, .tick.bl::after, .tick.br::after {
+      width: 1px; height: 8px; left: 0; top: 0;
+    }
+    .tick.tr::before, .tick.br::before { left: auto; right: 0; }
+    .tick.tr::after { left: auto; right: 0; }
+    .tick.bl::after, .tick.br::after { top: auto; bottom: 0; }
+    .tick.br::after { left: auto; right: 0; }
+
+    .chip {
+      position: fixed;
+      pointer-events: none;
+      background: var(--ink);
+      color: var(--mark);
+      font: 11px/1.2 "IBM Plex Mono", ui-monospace, monospace;
+      letter-spacing: 0.04em;
+      padding: 4px 8px;
+      z-index: 3;
+      white-space: nowrap;
+      border: 1px solid var(--mark);
+    }
+
+    .toast {
+      position: fixed;
+      inset-block-end: 24px;
+      inset-inline-start: 50%;
+      translate: -50% 0;
+      background: var(--ink);
+      color: var(--mark);
+      font: 12px/1.3 "IBM Plex Mono", ui-monospace, monospace;
+      letter-spacing: 0.08em;
+      padding: 8px 14px;
+      border: 1px solid var(--mark);
+      z-index: 20;
+      pointer-events: none;
+      text-transform: uppercase;
+    }
+
+    .shot-pop {
+      inset: unset;
+      margin: 0;
+      padding: 4px;
+      border: 0;
+      background: var(--ink);
+      color: var(--type);
+      border-radius: 10px;
+      transform-origin: 100% 0%;
+      translate: 0;
+      scale: 0.18;
+      opacity: 0;
+      filter:
+        drop-shadow(-4px 0 12px rgb(20 18 14 / 0.2))
+        drop-shadow(0 8px 24px rgb(20 18 14 / 0.22));
+      transition-property: opacity, scale, display, overlay;
+      transition-duration: 220ms;
+      transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+      transition-behavior: allow-discrete;
+    }
+
+    .shot-pop:is(:popover-open, .\:popover-open) {
+      display: block;
+      opacity: 1;
+      scale: 1;
+
+      @starting-style {
+        opacity: 0;
+        scale: 0.18;
+      }
+    }
+
+    @supports (anchor-name: --peek-shot) {
+      .shot-pop {
+        position: fixed;
+        right: anchor(left);
+        top: anchor(top);
+        translate: -6px 0;
+        position-try: flip-inline, flip-block;
+      }
+    }
+
+    .shot-pop img {
+      display: block;
+      max-inline-size: min(360px, 46vw);
+      max-block-size: min(280px, 55dvb);
+      inline-size: auto;
+      block-size: auto;
+      object-fit: contain;
+      object-position: center;
+      background: #111;
+    }
+
+    @media (max-width: 720px) {
+      .page main { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html, .rail, .shot-pop {
+        transition: none;
+      }
+      .shot-pop {
+        scale: 1;
+      }
+      .shot-pop:is(:popover-open, .\:popover-open) {
+        @starting-style {
+          scale: 1;
+        }
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page" id="page">
+    <header>
+      <strong>PEEK / FIXTURE</strong>
+      <nav>
+        <a href="#billing">Billing</a>
+        ·
+        <a href="#team">Team</a>
+        <button type="button" class="peek-toggle" id="toggle" aria-expanded="false" aria-controls="rail">Peek</button>
+      </nav>
+    </header>
+    <main>
+      <section class="card" id="billing">
+        <h1>Billing settings</h1>
+        <p>Click anything on this page. The rail on the right is Peek — it takes a column, so this layout shrinks instead of sitting under an overlay.</p>
+        <form>
+          <label for="company">Company</label>
+          <input id="company" name="company" value="Example Co" />
+          <label for="plan">Plan</label>
+          <input id="plan" name="plan" value="Pro — annual" />
+          <button class="primary" type="button" data-testid="save-billing">Save changes</button>
+        </form>
+        <p class="overflow">The monthly invoice preview overflows this box on purpose because the label is far too long to fit.</p>
+      </section>
+      <aside class="card" id="team">
+        <h2>Team</h2>
+        <ul>
+          <li>Mayron — owner</li>
+          <li>Ada — billing</li>
+        </ul>
+      </aside>
+    </main>
+  </div>
+
+  <aside class="rail" id="rail" aria-label="Peek">
+    <section class="panel">
+      <div class="panel-face">
+        <div class="panel-head">
+          <span>Pinned</span>
+          <span class="count" id="count">0</span>
+        </div>
+        <div class="pills" id="pills"><span class="empty">None yet — click the page</span></div>
+        <div class="panel-actions">
+          <button class="done" type="button" disabled aria-keyshortcuts="Enter">Done <kbd>Enter</kbd></button>
+          <button class="cancel" type="button" aria-keyshortcuts="Escape">Cancel <kbd>Esc</kbd></button>
+        </div>
+        <div class="proto">
+          Prototype
+          <label>Gap <input id="gap" type="range" min="8" max="32" value="18" /> <span id="gapVal">18</span></label>
+          <label>Width <input id="width" type="range" min="240" max="420" value="350" /> <span id="widthVal">350</span></label>
+          <div class="swatches" role="radiogroup" aria-label="Palette">
+            <button type="button" class="swatch" data-palette="lime" aria-pressed="true" style="--chip:#c8ff4d; --well:#14120e"><i></i>Lime</button>
+            <button type="button" class="swatch" data-palette="phosphor" aria-pressed="false" style="--chip:#6dff4d; --well:#242526"><i></i>Phosphor</button>
+            <button type="button" class="swatch" data-palette="amber" aria-pressed="false" style="--chip:#ffb020; --well:#16110a"><i></i>Amber</button>
+            <button type="button" class="swatch" data-palette="ice" aria-pressed="false" style="--chip:#7ee7ff; --well:#0c1114"><i></i>Ice</button>
+            <button type="button" class="swatch" data-palette="paper" aria-pressed="false" style="--chip:#14120e; --well:#f4f1ea"><i></i>Paper</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </aside>
+
+  <div class="box" id="box" hidden>
+    <span class="tick tl"></span><span class="tick tr"></span>
+    <span class="tick bl"></span><span class="tick br"></span>
+  </div>
+  <div class="chip" id="chip" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    const root = document.documentElement;
+    const page = document.getElementById("page");
+    const rail = document.getElementById("rail");
+    const toggle = document.getElementById("toggle");
+    const pillsEl = document.getElementById("pills");
+    const countEl = document.getElementById("count");
+    const doneBtn = document.querySelector(".done");
+    const cancelBtn = document.querySelector(".cancel");
+    const box = document.getElementById("box");
+    const chip = document.getElementById("chip");
+    const pins = [];
+    let pinSeq = 0;
+
+    function chipLabel(el) {
+      const tag = el.tagName.toLowerCase();
+      const id = el.id ? `#${el.id}` : "";
+      const cls = [...el.classList].slice(0, 2).map((c) => `.${c}`).join("");
+      return `${tag}${id}${cls}`.slice(0, 60);
+    }
+
+    function paint(el) {
+      if (!el) {
+        box.hidden = true;
+        chip.hidden = true;
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      box.hidden = false;
+      box.style.left = `${r.x}px`;
+      box.style.top = `${r.y}px`;
+      box.style.width = `${Math.max(1, r.width)}px`;
+      box.style.height = `${Math.max(1, r.height)}px`;
+      chip.hidden = false;
+      chip.textContent = chipLabel(el);
+      let cx = r.x;
+      let cy = r.y - 22;
+      if (cy < 8) cy = r.bottom + 6;
+      chip.style.left = `${Math.max(8, cx)}px`;
+      chip.style.top = `${cy}px`;
+    }
+
+    function isOpen() {
+      return root.dataset.peek !== "closed";
+    }
+
+    let settleTimer = 0;
+    function setPeek(open) {
+      root.classList.remove("is-settled");
+      root.dataset.peek = open ? "open" : "closed";
+      toggle.setAttribute("aria-expanded", String(open));
+      rail.inert = !open;
+      clearTimeout(settleTimer);
+      if (open) {
+        const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        settleTimer = setTimeout(() => {
+          if (isOpen()) root.classList.add("is-settled");
+        }, reduce ? 0 : 500);
+      } else {
+        pins.length = 0;
+        render();
+        paint(null);
+      }
+    }
+
+    function hit(x, y) {
+      if (!isOpen()) return null;
+      const el = document.elementFromPoint(x, y);
+      if (!el || !page.contains(el)) return null;
+      if (el === page || el.tagName === "MAIN" || el.tagName === "HEADER") return null;
+      if (el.closest(".peek-toggle, nav")) return null;
+      return el.closest("button, input, a, p, h1, h2, li, label, .card, .overflow") || el;
+    }
+
+    function render() {
+      countEl.textContent = String(pins.length);
+      doneBtn.disabled = pins.length === 0;
+      document.querySelectorAll(".shot-pop").forEach((n) => n.remove());
+      pillsEl.replaceChildren();
+      if (pins.length === 0) {
+        const empty = document.createElement("span");
+        empty.className = "empty";
+        empty.textContent = "None yet — click the page";
+        pillsEl.append(empty);
+        return;
+      }
+      for (const pin of pins) {
+        const popId = `shot-${pin.id}`;
+        const anchor = `--shot-${pin.id}`;
+        const pill = document.createElement("div");
+        pill.className = "pill";
+        const shot = document.createElement("button");
+        shot.type = "button";
+        shot.className = "pill-shot";
+        shot.style.anchorName = anchor;
+        shot.setAttribute("aria-label", `Preview ${pin.label}`);
+        if (pin.src) {
+          const thumb = document.createElement("img");
+          thumb.alt = "";
+          thumb.src = pin.src;
+          shot.append(thumb);
+        }
+        const label = document.createElement("span");
+        label.className = "pill-label";
+        label.textContent = pin.label;
+        const x = document.createElement("button");
+        x.type = "button";
+        x.className = "pill-x";
+        x.setAttribute("aria-label", "Unpin");
+        x.textContent = "×";
+        x.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          pins.splice(pins.indexOf(pin), 1);
+          render();
+        });
+        const pop = document.createElement("div");
+        pop.id = popId;
+        pop.className = "shot-pop";
+        pop.setAttribute("popover", "manual");
+        pop.style.positionAnchor = anchor;
+        if (pin.src) {
+          const full = document.createElement("img");
+          full.alt = pin.label;
+          full.src = pin.src;
+          pop.append(full);
+        }
+        document.body.append(pop);
+        let hideT = 0;
+        const show = () => {
+          clearTimeout(hideT);
+          if (pin.src) pop.showPopover();
+        };
+        const hide = () => {
+          hideT = setTimeout(() => pop.hidePopover(), 80);
+        };
+        shot.addEventListener("click", (ev) => ev.preventDefault());
+        shot.addEventListener("pointerenter", show);
+        shot.addEventListener("pointerleave", hide);
+        pop.addEventListener("pointerenter", show);
+        pop.addEventListener("pointerleave", hide);
+        pill.addEventListener("pointerenter", () => paint(pin.el));
+        pill.addEventListener("pointerleave", () => paint(null));
+        pill.append(shot, label, x);
+        pillsEl.append(pill);
+      }
+    }
+
+    async function snap(el) {
+      if (typeof html2canvas !== "function") return "";
+      box.hidden = true;
+      chip.hidden = true;
+      await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+      try {
+        const canvas = await html2canvas(el, {
+          backgroundColor: "#ffffff",
+          scale: Math.min(2, window.devicePixelRatio || 1),
+          logging: false,
+          useCORS: true,
+          ignoreElements: (node) => node.closest?.(".rail, .box, .chip, .toast, .shot-pop, .peek-toggle"),
+        });
+        return canvas.toDataURL("image/jpeg", 0.86);
+      } catch {
+        return "";
+      }
+    }
+
+    function toast(text) {
+      document.querySelector(".toast")?.remove();
+      const t = document.createElement("div");
+      t.className = "toast";
+      t.textContent = text;
+      document.body.append(t);
+      setTimeout(() => t.remove(), 2400);
+    }
+
+    page.addEventListener("pointermove", (e) => paint(hit(e.clientX, e.clientY)));
+    page.addEventListener("pointerleave", () => paint(null));
+    page.addEventListener("click", (e) => {
+      if (e.target.closest(".peek-toggle, nav a")) return;
+      if (!isOpen()) return;
+      e.preventDefault();
+      const el = hit(e.clientX, e.clientY);
+      if (!el) return;
+      if (pins.some((p) => p.el === el)) return;
+      const pin = { id: String(++pinSeq), el, label: chipLabel(el), src: "" };
+      pins.push(pin);
+      render();
+      snap(el).then((src) => {
+        if (!src || !pins.includes(pin)) return;
+        pin.src = src;
+        render();
+      });
+    });
+
+    doneBtn.addEventListener("click", () => {
+      if (!pins.length) return;
+      toast(`Copied. ${pins.length} element${pins.length === 1 ? "" : "s"} pinned.`);
+      setTimeout(() => setPeek(false), 280);
+    });
+    cancelBtn.addEventListener("click", () => setPeek(false));
+    toggle.addEventListener("click", () => setPeek(!isOpen()));
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        const openPop = document.querySelector("[popover]:popover-open");
+        if (openPop) {
+          e.preventDefault();
+          openPop.hidePopover();
+          return;
+        }
+        e.preventDefault();
+        setPeek(false);
+        return;
+      }
+      if (!isOpen()) return;
+      if (e.key === "Enter" && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        doneBtn.click();
+      }
+    });
+    setPeek(false);
+
+    const gap = document.getElementById("gap");
+    const width = document.getElementById("width");
+    const swatches = [...document.querySelectorAll(".swatch")];
+
+    function applyProto() {
+      root.style.setProperty("--gap", `${gap.value}px`);
+      root.style.setProperty("--panel", `${width.value}px`);
+      document.getElementById("gapVal").textContent = gap.value;
+      document.getElementById("widthVal").textContent = width.value;
+      localStorage.setItem("peek-proto", JSON.stringify({
+        gap: gap.value,
+        width: width.value,
+        palette: root.dataset.palette,
+      }));
+    }
+
+    function setPalette(name) {
+      root.dataset.palette = name;
+      for (const btn of swatches) {
+        btn.setAttribute("aria-pressed", String(btn.dataset.palette === name));
+      }
+      applyProto();
+    }
+
+    try {
+      const saved = JSON.parse(localStorage.getItem("peek-proto") || "null");
+      if (saved?.gap) gap.value = saved.gap;
+      if (saved?.width) width.value = saved.width;
+      if (saved?.palette) setPalette(saved.palette);
+    } catch {
+      /* keep defaults */
+    }
+    applyProto();
+
+    gap.addEventListener("input", applyProto);
+    width.addEventListener("input", applyProto);
+    for (const btn of swatches) {
+      btn.addEventListener("click", () => setPalette(btn.dataset.palette));
+    }
+  </script>
+  <script type="module">
+    if (!("anchorName" in document.documentElement.style)) {
+      await import("https://unpkg.com/@oddbird/css-anchor-positioning");
+    }
+  </script>
+</body>
+</html>

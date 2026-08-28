@@ -418,7 +418,7 @@ export const PeekDemo: React.FC = () => {
               <Caret on={caretOn} />
             ) : (
               <>
-                <span>look at this</span>
+                <span>Take a peek at 1 element. I want to </span>
                 {"\n\n"}
                 <div
                   style={{

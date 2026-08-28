@@ -78,5 +78,5 @@ func ClipboardMessage(pins []Pin) string {
 	if n != 1 {
 		noun = "elements"
 	}
-	return "look at this\n\nI pinned " + strconv.Itoa(n) + " " + noun + " in the browser."
+	return "Take a peek at " + strconv.Itoa(n) + " " + noun + ". I want to "
 }

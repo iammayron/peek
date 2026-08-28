@@ -450,7 +450,7 @@
     <div class="cols">
       <div>
         <h2 style="font-size:clamp(26px,3.2vw,38px);max-width:22ch;">Install registers itself. There is no config file.</h2>
-        <p class="lede" style="max-width:42ch;">One command installs the CLI, registers an MCP server, and drops a skill into every agent it finds on your machine. Say <em>&ldquo;look at this&rdquo;</em> and the agent knows where to look.</p>
+        <p class="lede" style="max-width:42ch;">One command installs the CLI, registers an MCP server, and drops a skill into every agent it finds on your machine. Say <em>&ldquo;take a peek&rdquo;</em> and the agent knows where to look.</p>
         <ul class="agents">
           <li data-peek>Claude Code</li>
           <li data-peek>Codex</li>
@@ -659,8 +659,7 @@
   doneBtn.addEventListener("click", async () => {
     const n = pins.length;
     const noun = n === 1 ? "element" : "elements";
-    const body = "look at this\n\nI pinned " + n + " " + noun + " in the browser.\n\n"
-      + pins.map((p, i) => (i + 1) + ". " + p.sel).join("\n");
+    const body = "Take a peek at " + n + " " + noun + ". I want to ";
     try { await navigator.clipboard.writeText(body); } catch (err) { /* toast still explains */ }
     say("Copied " + n + " " + noun + ". That is the real thing Peek does.");
     pins = [];

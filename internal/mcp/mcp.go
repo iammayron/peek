@@ -18,7 +18,7 @@ func Run() error {
 	s := server.NewMCPServer(peek.Pretty, peek.Version)
 
 	s.AddTool(mcp.NewTool("get_picked_element",
-		mcp.WithDescription("Return the DOM element(s) the user pinned in their browser with Peek (current session), including cropped screenshots, unique selectors, XPath, role/name, box, computed styles, and truncated HTML. Use when the user says 'this', 'these', 'the selected/inspected/pinned element', or 'look at this'."),
+		mcp.WithDescription("Return the DOM element(s) the user pinned in their browser with Peek (current session), including cropped screenshots, unique selectors, XPath, role/name, box, computed styles, and truncated HTML. Use when the user says 'this', 'these', 'the selected/inspected/pinned element', 'take a peek', or 'look at this'."),
 	), getPicked)
 
 	s.AddTool(mcp.NewTool("wait_for_pick",

@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — Peek
 
-> Last Updated: 2026-08-25
+> Last Updated: 2026-08-28
 
 Item ID: `afalnlminndnlfgnlphbelelpcblcbld`
 Publisher: `iammayron`
@@ -24,7 +24,7 @@ Peek
 Point at a page element and send it — selector, DOM, and a cropped screenshot — to your coding agent.
 
 **Detailed Description**
-Point at an element in your real browser and hand it to your coding agent. Click the Peek icon, click the elements you care about, hit Done. Peek copies a prompt containing a unique CSS selector, the XPath, the element HTML, its box and computed styles, and a cropped screenshot. Paste that into Claude Code, Codex, Cursor, or Grok Build and say what to change.
+Point at an element in your real browser and hand it to your coding agent. Click the Peek icon, click the elements you care about. A panel slides in on the right with a screenshot of each pin. Hit Done. Peek copies a prompt you finish in the agent, plus a unique CSS selector, the XPath, the element HTML, its box and computed styles, and a cropped screenshot. Paste that into Claude Code, Codex, Cursor, or Grok Build and say what to change.
 
 This is not a browser-driving agent. You pick. The model looks.
 
@@ -66,9 +66,9 @@ English
 | Marquee Promo Tile | 1400×560 | ✅ Ready | assets/store/promo-marquee-1400x560.png |
 
 ### Screenshot Notes
-1. Pinned: highlight + chip on a live element, tray showing a pill.
-2. Armed: crosshair overlay and empty tray, ready to pin.
-3. Copied: toast after Done, prompt on the clipboard.
+1. Pinned: highlight ticks on a live element, docked phosphor rail with screenshot thumbs.
+2. Armed: empty full-height rail that pushed the page, hover highlight ready to pin.
+3. Copied: toast after Done. Clipboard is `Take a peek at N elements. I want to `.
 
 ## Permissions Justification
 
@@ -78,7 +78,7 @@ English
 | tabs | permissions | Read the active tab URL/title so a pin records which page the node is on, and skip chrome:// / Web Store pages. |
 | scripting | permissions | Inject the picker overlay when the user clicks the icon or presses Alt+Shift+P. |
 | commands | permissions | Register Alt+Shift+P to toggle the picker. |
-| clipboardWrite | permissions | Copy the "look at this" prompt when the user hits Done. |
+| clipboardWrite | permissions | Copy the "Take a peek at N elements. I want to " prompt when the user hits Done. |
 | `<all_urls>` | host_permissions | The picker has to run on whatever page the developer is building, including localhost and file URLs. It only injects after an explicit toolbar click or shortcut. |
 
 ## Privacy & Data Use
@@ -112,7 +112,7 @@ The listing declares that the extension does not collect or use user data. Suppo
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
-| 0.2.5 | 2026-08-28 | Docked full-height pin rail that pushes the page, slide in/out, phosphor panel, screenshot thumbs with hover preview. | Pending review |
+| 0.2.5 | 2026-08-28 | Docked full-height pin rail that pushes the page, screenshot thumbs with hover preview, unpin confirm. Done copies `Take a peek at N elements. I want to `. | Pending review |
 | 0.2.4 | 2026-08-25 | Enter finishes a pin session. Peek's own tray and HUD are excluded from hit-testing so they cannot be selected. | Pending review |
 | 0.2.3 | 2026-08-25 | Skill documents the full pin payload. No extension code change. | Git tag |
 | 0.2.2 | 2026-08-25 | Install help points store users at the listing instead of load-unpacked. No extension code change. | Git tag |
